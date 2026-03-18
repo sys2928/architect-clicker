@@ -1,0 +1,2319 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>건축가 키우기</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Black+Han+Sans&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #1a1208;
+  --surface: #231a0c;
+  --surface2: #2e2210;
+  --gold: #f5c842;
+  --gold2: #e8a020;
+  --cyan: #4dd9f5;
+  --white: #fff8e8;
+  --muted: #9a8060;
+  --success: #6ddc7a;
+  --danger: #f56060;
+  --border: rgba(245,200,66,0.2);
+  --border2: rgba(245,200,66,0.5);
+  --tab-h: 68px;
+  --top-h: 56px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+
+body {
+  background:var(--bg);
+  color:var(--white);
+  font-family:'Noto Sans KR',sans-serif;
+  height:100dvh;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  max-width:480px;
+  margin:0 auto;
+  position:relative;
+}
+
+/* 배경 패턴 */
+body::before {
+  content:'';position:fixed;inset:0;
+  background-image:radial-gradient(circle at 20% 20%, rgba(245,200,66,0.04) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(77,217,245,0.03) 0%, transparent 50%);
+  pointer-events:none;z-index:0;
+}
+
+/* ── 상단 고정 바 ── */
+.top-bar {
+  position:relative;z-index:10;
+  background:var(--surface);
+  border-bottom:1px solid var(--border2);
+  height:var(--top-h);
+  display:flex;align-items:center;
+  padding:0 14px;
+  gap:10px;
+  flex-shrink:0;
+}
+.top-avatar {
+  width:38px;height:38px;border-radius:50%;
+  background:linear-gradient(135deg,var(--gold2),var(--gold));
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;
+  border:2px solid var(--gold);
+}
+.top-info { flex:1; min-width:0; }
+.top-name {
+  font-family:'Black Han Sans',sans-serif;
+  font-size:15px;color:var(--white);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.top-lv {
+  font-size:11px;color:var(--gold);font-weight:500;margin-top:1px;
+}
+.top-pts {
+  text-align:right;flex-shrink:0;
+}
+.top-pts-val {
+  font-family:'Black Han Sans',sans-serif;
+  font-size:18px;color:var(--gold);
+}
+.top-pts-label { font-size:10px;color:var(--muted); }
+
+/* XP 바 — 상단 바 바로 아래 */
+.xp-strip {
+  height:4px;background:var(--surface2);flex-shrink:0;
+  position:relative;z-index:9;
+}
+.xp-strip-fill {
+  height:100%;background:linear-gradient(90deg,var(--gold2),var(--gold));
+  transition:width 0.4s ease;
+}
+
+/* ── 스크롤 콘텐츠 영역 ── */
+.scroll-area {
+  flex:1;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;
+  padding-bottom:calc(var(--tab-h) + 8px);
+}
+.scroll-area::-webkit-scrollbar{width:3px;}
+.scroll-area::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* ── 캐릭터 존 ── */
+.char-zone {
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:20px 16px 16px;
+  display:flex;flex-direction:column;align-items:center;
+  gap:12px;
+}
+.char-title-badge {
+  font-size:11px;color:var(--gold);font-weight:700;
+  background:rgba(245,200,66,0.12);
+  border:1px solid var(--border2);
+  border-radius:20px;padding:3px 14px;letter-spacing:1px;
+}
+.char-building {
+  position:relative;
+  cursor:pointer;user-select:none;
+  transition:transform 0.08s;
+  filter:drop-shadow(0 0 16px rgba(245,200,66,0.25));
+}
+.char-building:active{transform:scale(0.92);}
+.char-building svg { width:160px;height:180px;display:block; }
+
+.click-hint-row {
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;color:var(--muted);
+}
+.click-hint-dot {
+  width:8px;height:8px;border-radius:50%;
+  background:var(--gold);opacity:0.6;
+  animation:dotpulse 1.5s ease-in-out infinite;
+}
+@keyframes dotpulse{0%,100%{opacity:0.3;transform:scale(1)}50%{opacity:1;transform:scale(1.3)}}
+
+/* 클릭당 / 초당 */
+.click-stats-row {
+  display:flex;gap:8px;width:100%;
+}
+.click-stat {
+  flex:1;background:var(--surface2);
+  border:1px solid var(--border);border-radius:10px;
+  padding:8px 10px;text-align:center;
+}
+.click-stat-val {
+  font-family:'Black Han Sans',sans-serif;
+  font-size:16px;color:var(--cyan);
+}
+.click-stat-label{font-size:10px;color:var(--muted);margin-top:1px;}
+
+/* ── 탭 패널 공통 ── */
+.tab-panel { display:none;padding:12px; }
+.tab-panel.active { display:block; }
+.section-title {
+  font-family:'Black Han Sans',sans-serif;
+  font-size:14px;color:var(--gold);
+  margin-bottom:10px;
+  display:flex;align-items:center;gap:6px;
+}
+.section-title::after {
+  content:'';flex:1;height:1px;background:var(--border);
+}
+
+/* ── 업그레이드 카드 ── */
+.upg-list { display:flex;flex-direction:column;gap:8px; }
+.upg-card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:12px 14px;
+  display:flex;align-items:center;gap:12px;
+  cursor:pointer;transition:all 0.15s;
+  position:relative;overflow:hidden;
+}
+.upg-card::before {
+  content:'';position:absolute;left:0;top:0;bottom:0;
+  width:3px;background:var(--gold2);opacity:0;border-radius:3px 0 0 3px;
+  transition:opacity 0.15s;
+}
+.upg-card.can {border-color:rgba(245,200,66,0.45);}
+.upg-card.can::before{opacity:1;}
+.upg-card.can:active{transform:scale(0.98);}
+.upg-card.cant{opacity:0.38;cursor:not-allowed;}
+.upg-card.done{border-color:rgba(109,220,122,0.35);cursor:default;}
+.upg-card.done::before{background:var(--success);opacity:1;}
+
+.upg-icon {
+  width:44px;height:44px;border-radius:10px;
+  background:var(--surface2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;flex-shrink:0;
+  border:1px solid var(--border);
+}
+.upg-info{flex:1;min-width:0;}
+.upg-name{font-size:13px;font-weight:700;color:var(--white);}
+.upg-desc{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;}
+.upg-right{text-align:right;flex-shrink:0;}
+.upg-cost{font-family:'Black Han Sans',sans-serif;font-size:14px;color:var(--gold);}
+.upg-owned{font-size:10px;color:var(--muted);margin-top:2px;}
+
+/* ── 의뢰 미션 ── */
+.mission-card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:14px;
+  position:relative;
+  overflow:hidden;
+  transition:border-color 0.2s;
+}
+.mission-card.urgent { border-color:rgba(245,96,96,0.6); }
+.mission-card.normal { border-color:rgba(245,200,66,0.35); }
+.mission-card.easy   { border-color:rgba(109,220,122,0.35); }
+.mission-card.done-card { opacity:0.55; }
+
+.mission-card::before {
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+}
+.mission-card.urgent::before  { background:var(--danger); }
+.mission-card.normal::before  { background:var(--gold2); }
+.mission-card.easy::before    { background:var(--success); }
+
+.mission-top { display:flex;align-items:flex-start;gap:10px;margin-bottom:10px; }
+.mission-icon {
+  width:46px;height:46px;border-radius:12px;
+  background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;flex-shrink:0;
+}
+.mission-meta { flex:1;min-width:0; }
+.mission-name { font-size:14px;font-weight:700;color:var(--white);margin-bottom:3px; }
+.mission-client { font-size:11px;color:var(--muted); }
+.mission-diff {
+  font-size:10px;padding:2px 8px;border-radius:99px;font-weight:700;
+  flex-shrink:0;align-self:flex-start;
+}
+.diff-urgent { background:rgba(245,96,96,0.15);color:var(--danger); }
+.diff-normal { background:rgba(245,200,66,0.15);color:var(--gold); }
+.diff-easy   { background:rgba(109,220,122,0.15);color:var(--success); }
+
+.mission-req {
+  background:var(--surface2);border-radius:8px;
+  padding:8px 12px;margin-bottom:10px;
+  font-size:12px;color:var(--muted);
+  display:flex;align-items:center;gap:6px;
+}
+.mission-req-val { color:var(--white);font-weight:700; }
+.mission-req-progress {
+  margin-left:auto;font-size:11px;
+  font-family:'Black Han Sans',sans-serif;
+}
+
+.mission-progress-bar {
+  width:100%;height:6px;background:var(--surface2);
+  border-radius:3px;overflow:hidden;margin-bottom:10px;
+}
+.mission-progress-fill {
+  height:100%;border-radius:3px;
+  background:linear-gradient(90deg,var(--gold2),var(--gold));
+  transition:width 0.4s ease;
+}
+
+.mission-bottom { display:flex;align-items:center;gap:10px; }
+.mission-reward {
+  flex:1;font-size:12px;color:var(--gold);font-weight:700;
+}
+.mission-reward span { color:var(--muted);font-weight:400; }
+.mission-timer {
+  font-family:'Black Han Sans',sans-serif;
+  font-size:13px;padding:2px 0;
+}
+.mission-timer.danger { color:var(--danger); }
+.mission-timer.warn   { color:var(--gold); }
+.mission-timer.ok     { color:var(--muted); }
+
+.mission-claim-btn {
+  padding:8px 16px;border:none;border-radius:9px;
+  font-size:12px;font-weight:700;font-family:'Noto Sans KR',sans-serif;
+  cursor:pointer;transition:all 0.15s;flex-shrink:0;
+}
+.mission-claim-btn.ready  { background:var(--gold);color:#1a1208; }
+.mission-claim-btn.ready:active { opacity:0.85; }
+.mission-claim-btn.working{ background:var(--surface2);color:var(--muted);cursor:default; }
+.mission-claim-btn.expired{ background:rgba(245,96,96,0.15);color:var(--danger);cursor:default; }
+
+.mission-done-row {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;
+  display:flex;align-items:center;gap:10px;
+  opacity:0.7;
+}
+.mission-done-icon { font-size:20px;flex-shrink:0; }
+.mission-done-name { font-size:12px;font-weight:700;color:var(--white); }
+.mission-done-reward { font-size:11px;color:var(--gold);margin-top:2px; }
+.mission-done-check { font-size:18px;margin-left:auto; }
+
+.tab-badge {
+  position:absolute;top:6px;right:10px;
+  width:8px;height:8px;border-radius:50%;
+  background:var(--danger);
+  animation:dotpulse 1s ease-in-out infinite;
+}
+
+/* ── 제도 탭 ── */
+#draft-canvas {
+  display:block;width:100%;height:160px;
+  background:repeating-linear-gradient(0deg,transparent,transparent 19px,rgba(245,200,66,0.06) 19px,rgba(245,200,66,0.06) 20px),
+    repeating-linear-gradient(90deg,transparent,transparent 19px,rgba(245,200,66,0.06) 19px,rgba(245,200,66,0.06) 20px);
+  background-color:#130f05;
+  border:1px solid var(--border2);border-radius:12px;
+  cursor:crosshair;touch-action:none;margin-bottom:10px;
+}
+#draft-canvas.locked{cursor:not-allowed;opacity:0.55;}
+.draft-result-box {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:14px 16px;
+  display:flex;align-items:center;gap:14px;margin-bottom:10px;
+}
+.draft-acc-big {
+  font-family:'Black Han Sans',sans-serif;
+  font-size:36px;color:var(--gold);min-width:80px;
+}
+.draft-acc-info{flex:1;}
+.draft-acc-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.acc-bar-bg{width:100%;height:7px;background:var(--surface2);border-radius:4px;overflow:hidden;margin-top:7px;}
+.acc-bar-fill{height:100%;border-radius:4px;transition:width 0.4s,background 0.4s;}
+.draft-guide-card {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:12px 16px;
+  font-size:12px;color:var(--muted);line-height:1.9;
+}
+.draft-guide-card b{color:var(--gold);font-weight:700;}
+.draft-reset-btn {
+  width:100%;margin-top:10px;
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:10px;padding:11px;
+  color:var(--muted);font-size:12px;font-family:'Noto Sans KR',sans-serif;
+  cursor:pointer;letter-spacing:1px;transition:all 0.15s;
+}
+.draft-reset-btn:active{background:var(--surface);color:var(--white);}
+
+/* ── 보상 탭 ── */
+.reward-cards{display:flex;flex-direction:column;gap:10px;}
+.reward-card {
+  background:var(--surface);border-radius:14px;
+  padding:16px;cursor:pointer;border:1px solid var(--border);
+  transition:all 0.15s;
+}
+.reward-card:active:not(:disabled){transform:scale(0.98);}
+.reward-card.ad-card{border-color:rgba(109,220,122,0.3);}
+.reward-card.pm-card{border-color:rgba(245,200,66,0.35);}
+.reward-card:disabled{opacity:0.4;cursor:not-allowed;}
+.rc-top{display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+.rc-icon{font-size:28px;width:46px;text-align:center;}
+.rc-title-wrap{}
+.rc-title{font-size:14px;font-weight:700;color:var(--white);}
+.rc-subtitle{font-size:11px;color:var(--muted);margin-top:2px;}
+.rc-reward{font-size:12px;font-weight:700;margin-top:4px;}
+.ad-card .rc-reward{color:var(--success);}
+.pm-card .rc-reward{color:var(--gold);}
+.rc-cd{font-size:11px;color:var(--danger);margin-top:3px;}
+
+.pm-options{display:flex;flex-direction:column;gap:6px;margin-top:12px;}
+.pm-opt{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;
+  display:flex;justify-content:space-between;align-items:center;
+  cursor:pointer;transition:all 0.15s;
+}
+.pm-opt:active{background:var(--surface);}
+.pm-opt.sel{border-color:var(--gold);}
+.pm-opt-name{font-size:12px;font-weight:700;color:var(--white);}
+.pm-opt-desc{font-size:10px;color:var(--muted);margin-top:2px;}
+.pm-opt-price{font-family:'Black Han Sans',sans-serif;font-size:14px;color:var(--gold);}
+.pm-buy-btn {
+  width:100%;margin-top:10px;padding:14px;
+  background:linear-gradient(90deg,var(--gold2),var(--gold));
+  border:none;border-radius:12px;
+  color:#1a1208;font-size:14px;font-weight:700;font-family:'Noto Sans KR',sans-serif;
+  cursor:pointer;transition:opacity 0.15s;
+}
+.pm-buy-btn:active{opacity:0.85;}
+.pm-note{font-size:10px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.6;}
+
+/* ── 정보 탭 ── */
+.info-section{display:flex;flex-direction:column;gap:8px;}
+.info-row{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:12px 16px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.info-row-label{font-size:12px;color:var(--muted);}
+.info-row-val{font-family:'Black Han Sans',sans-serif;font-size:15px;color:var(--white);}
+
+.save-btn {
+  width:100%;padding:14px;margin-top:4px;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:12px;color:var(--gold);
+  font-size:13px;font-weight:700;font-family:'Noto Sans KR',sans-serif;
+  cursor:pointer;transition:all 0.15s;letter-spacing:0.5px;
+}
+.save-btn:active{background:var(--surface2);}
+.reset-btn {
+  width:100%;padding:12px;
+  background:transparent;border:1px solid rgba(245,96,96,0.3);
+  border-radius:12px;color:var(--danger);
+  font-size:12px;font-family:'Noto Sans KR',sans-serif;
+  cursor:pointer;transition:all 0.15s;
+}
+.reset-btn:active{background:rgba(245,96,96,0.08);}
+.save-ts{font-size:11px;color:var(--muted);text-align:center;margin-top:6px;}
+
+/* ── 하단 탭 바 ── */
+.tab-bar {
+  position:relative;z-index:10;
+  background:var(--surface);
+  border-top:1px solid var(--border2);
+  height:var(--tab-h);
+  display:flex;
+  flex-shrink:0;
+}
+.tab-btn {
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;
+  border:none;background:transparent;cursor:pointer;
+  transition:all 0.15s;padding:0;position:relative;
+}
+.tab-btn:active{background:rgba(245,200,66,0.05);}
+.tab-icon{font-size:18px;transition:transform 0.15s;}
+.tab-label{font-size:9px;color:var(--muted);font-weight:500;transition:color 0.15s;}
+.tab-btn.active .tab-icon{transform:scale(1.15);}
+.tab-btn.active .tab-label{color:var(--gold);font-weight:700;}
+.tab-indicator {
+  position:absolute;top:0;left:0;
+  height:2px;background:var(--gold);
+  border-radius:0 0 2px 2px;
+  width:16.666%;
+  transition:left 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ── 광고 모달 ── */
+.modal-wrap {
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.85);
+  z-index:100;display:flex;align-items:flex-end;
+  max-width:480px;margin:0 auto;
+}
+.modal-wrap.hidden{display:none;}
+.modal-sheet {
+  background:var(--surface);
+  border-radius:20px 20px 0 0;
+  border-top:1px solid var(--border2);
+  padding:20px 20px 36px;
+  width:100%;
+}
+.modal-handle{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 18px;}
+.modal-title{font-family:'Black Han Sans',sans-serif;font-size:20px;color:var(--white);margin-bottom:6px;}
+.modal-desc{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;}
+.ad-sim-box {
+  background:#0d0a02;border:1px dashed var(--border2);
+  border-radius:12px;height:80px;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:4px;margin-bottom:14px;
+}
+.ad-sim-label{font-size:9px;color:var(--muted);letter-spacing:2px;}
+.ad-timer{font-family:'Black Han Sans',sans-serif;font-size:38px;color:var(--cyan);}
+.modal-prog-bg{width:100%;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-bottom:16px;}
+.modal-prog-fill{height:100%;background:var(--cyan);border-radius:3px;transition:width 0.1s linear;}
+.modal-claim-btn{
+  width:100%;padding:15px;border:none;border-radius:12px;
+  font-size:15px;font-weight:700;font-family:'Noto Sans KR',sans-serif;
+  cursor:pointer;transition:all 0.15s;
+}
+.modal-claim-btn.watching{background:var(--surface2);color:var(--muted);cursor:not-allowed;}
+.modal-claim-btn.done{background:var(--success);color:#0a1208;}
+.modal-skip{text-align:center;margin-top:12px;font-size:12px;color:var(--muted);cursor:pointer;padding:6px;}
+
+/* ── 토스트 ── */
+.toast {
+  position:fixed;top:calc(var(--top-h) + 8px);left:50%;
+  transform:translateX(-50%) translateY(-10px);
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:20px;padding:9px 18px;
+  font-size:13px;font-weight:700;color:var(--white);
+  z-index:200;opacity:0;transition:all 0.25s;
+  white-space:nowrap;pointer-events:none;
+  max-width:calc(100% - 32px);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── 플로팅 텍스트 ── */
+.float-txt {
+  position:fixed;font-family:'Black Han Sans',sans-serif;
+  font-size:22px;color:var(--gold);
+  pointer-events:none;z-index:50;
+  animation:floatUp 0.8s ease forwards;
+  text-shadow:0 0 8px rgba(245,200,66,0.6);
+}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-60px) scale(0.7)}}
+
+.auto-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--success);margin-right:4px;animation:blink 1.5s infinite;vertical-align:middle;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+
+/* 로그 */
+.log-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;}
+.log-entry{font-size:11px;color:var(--muted);padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:8px;}
+.log-entry:last-child{border-bottom:none;}
+.log-entry.new{color:var(--cyan);}
+.log-time{opacity:0.5;flex-shrink:0;font-size:10px;}
+
+/* ── 상단 저장 버튼 ── */
+.top-save-btn {
+  width:34px;height:34px;border-radius:8px;
+  background:rgba(245,200,66,0.12);
+  border:1px solid var(--border2);
+  font-size:16px;cursor:pointer;
+  flex-shrink:0;transition:all 0.15s;
+  display:flex;align-items:center;justify-content:center;
+}
+.top-save-btn:active { background:rgba(245,200,66,0.25); transform:scale(0.92); }
+.top-save-btn.saved  { background:rgba(109,220,122,0.2); border-color:rgba(109,220,122,0.5); }
+
+/* ── 업적 시스템 ── */
+.ach-tabs { display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap; }
+.ach-tab {
+  padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;
+  border:1px solid var(--border);background:var(--surface2);
+  color:var(--muted);cursor:pointer;transition:all 0.15s;
+}
+.ach-tab.active { background:rgba(245,200,66,0.15);border-color:var(--border2);color:var(--gold); }
+
+.ach-progress-box {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:14px 16px;margin-bottom:14px;
+  display:flex;align-items:center;gap:14px;
+}
+.ach-progress-ring { position:relative;width:54px;height:54px;flex-shrink:0; }
+.ach-progress-ring svg { transform:rotate(-90deg); }
+.ach-progress-ring-val {
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:'Black Han Sans',sans-serif;font-size:14px;color:var(--gold);
+}
+.ach-progress-info {}
+.ach-progress-title { font-size:13px;font-weight:700;color:var(--white);margin-bottom:3px; }
+.ach-progress-sub   { font-size:11px;color:var(--muted); }
+
+.ach-list { display:flex;flex-direction:column;gap:8px; }
+.ach-card {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:12px 14px;
+  display:flex;align-items:center;gap:12px;transition:border-color 0.2s;
+}
+.ach-card.unlocked { border-color:rgba(245,200,66,0.5); }
+.ach-card.locked   { opacity:0.42; }
+.ach-icon-wrap {
+  width:44px;height:44px;border-radius:11px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;border:1px solid var(--border);
+}
+.ach-card.unlocked .ach-icon-wrap { background:rgba(245,200,66,0.12);border-color:var(--border2); }
+.ach-card.locked   .ach-icon-wrap { background:var(--surface2);filter:grayscale(1); }
+.ach-info { flex:1;min-width:0; }
+.ach-name { font-size:13px;font-weight:700;color:var(--white);margin-bottom:2px; }
+.ach-desc { font-size:11px;color:var(--muted);line-height:1.4; }
+.ach-right { text-align:right;flex-shrink:0; }
+.ach-check { font-size:20px; }
+.ach-reward-txt { font-size:10px;color:var(--gold);margin-top:2px; }
+
+.ach-popup {
+  position:fixed;bottom:calc(var(--tab-h)+16px);left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:14px;padding:12px 18px;
+  display:flex;align-items:center;gap:10px;
+  z-index:300;opacity:0;transition:all 0.35s;
+  pointer-events:none;min-width:240px;max-width:calc(100%-32px);
+}
+.ach-popup.show { opacity:1;transform:translateX(-50%) translateY(0); }
+.ach-popup-icon { font-size:26px;flex-shrink:0; }
+.ach-popup-label { font-size:10px;color:var(--gold);font-weight:700;letter-spacing:1px;margin-bottom:2px; }
+.ach-popup-name  { font-size:13px;font-weight:700;color:var(--white); }
+
+/* ── 프레스티지 시스템 ── */
+.prestige-locked {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:20px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+}
+.prestige-locked-icon { font-size:40px;filter:grayscale(0.6);opacity:0.7; }
+.prestige-locked-title { font-size:14px;font-weight:700;color:var(--muted); }
+.prestige-locked-desc  { font-size:12px;color:var(--muted);line-height:1.7; }
+.prestige-locked-progress {
+  width:100%;background:var(--surface2);border-radius:8px;padding:10px 14px;
+  display:flex;justify-content:space-between;align-items:center;
+  border:1px solid var(--border);
+}
+.prestige-locked-progress-label { font-size:11px;color:var(--muted); }
+.prestige-locked-progress-val   { font-family:'Black Han Sans',sans-serif;font-size:15px;color:var(--gold); }
+
+.prestige-ready {
+  background:linear-gradient(135deg,#1a0f2e,#2e1a08);
+  border:1px solid rgba(180,100,255,0.4);
+  border-radius:14px;padding:20px;
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  position:relative;overflow:hidden;
+}
+.prestige-ready::before {
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 0%,rgba(180,100,255,0.08) 0%,transparent 70%);
+  pointer-events:none;
+}
+.prestige-ready-badge {
+  font-size:10px;font-weight:700;letter-spacing:2px;
+  background:rgba(180,100,255,0.15);border:1px solid rgba(180,100,255,0.4);
+  border-radius:20px;padding:3px 14px;color:#c87fff;
+}
+.prestige-ready-icon { font-size:52px; animation:prestige-float 2s ease-in-out infinite; }
+@keyframes prestige-float {
+  0%,100%{transform:translateY(0) scale(1)}
+  50%{transform:translateY(-6px) scale(1.05)}
+}
+.prestige-ready-title { font-family:'Black Han Sans',sans-serif;font-size:20px;color:#e0b0ff;text-align:center; }
+.prestige-ready-desc  { font-size:12px;color:#a080c0;text-align:center;line-height:1.7; }
+
+.prestige-bonuses {
+  width:100%;display:flex;flex-direction:column;gap:8px;
+}
+.prestige-bonus-row {
+  background:rgba(180,100,255,0.08);border:1px solid rgba(180,100,255,0.2);
+  border-radius:10px;padding:10px 14px;
+  display:flex;align-items:center;gap:10px;
+}
+.prestige-bonus-icon { font-size:20px;flex-shrink:0; }
+.prestige-bonus-info { flex:1; }
+.prestige-bonus-name { font-size:12px;font-weight:700;color:#e0b0ff; }
+.prestige-bonus-desc { font-size:11px;color:#8060a0;margin-top:2px; }
+.prestige-bonus-val  { font-family:'Black Han Sans',sans-serif;font-size:15px;color:#c87fff;flex-shrink:0; }
+
+.prestige-btn {
+  width:100%;padding:16px;border:none;border-radius:12px;
+  background:linear-gradient(90deg,#7030b0,#c060f0);
+  color:#fff;font-size:15px;font-weight:700;
+  font-family:'Noto Sans KR',sans-serif;
+  cursor:pointer;transition:opacity 0.15s;letter-spacing:0.5px;
+}
+.prestige-btn:active { opacity:0.85; }
+.prestige-warn {
+  font-size:11px;color:#8060a0;text-align:center;line-height:1.6;
+}
+
+.prestige-history {
+  display:flex;flex-direction:column;gap:8px;margin-top:4px;
+}
+.prestige-history-row {
+  background:var(--surface);border:1px solid rgba(180,100,255,0.2);
+  border-radius:10px;padding:10px 14px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.prestige-history-left  { display:flex;align-items:center;gap:10px; }
+.prestige-history-num   { font-family:'Black Han Sans',sans-serif;font-size:18px;color:#c87fff; }
+.prestige-history-label { font-size:11px;color:var(--muted); }
+.prestige-history-val   { font-size:10px;color:#8060a0;margin-top:2px; }
+.prestige-history-mult  { font-family:'Black Han Sans',sans-serif;font-size:16px;color:#e0b0ff; }
+
+/* 프레스티지 확인 모달 */
+.prestige-modal-wrap {
+  position:fixed;inset:0;background:rgba(0,0,0,0.88);
+  z-index:200;display:flex;align-items:flex-end;
+  max-width:480px;margin:0 auto;
+}
+.prestige-modal-wrap.hidden { display:none; }
+.prestige-modal-sheet {
+  background:linear-gradient(180deg,#1a0f2e,#231a0c);
+  border-radius:22px 22px 0 0;
+  border-top:1px solid rgba(180,100,255,0.4);
+  padding:22px 20px 40px;width:100%;
+}
+.prestige-modal-handle { width:40px;height:4px;background:rgba(180,100,255,0.3);border-radius:2px;margin:0 auto 20px; }
+.prestige-modal-title  { font-family:'Black Han Sans',sans-serif;font-size:22px;color:#e0b0ff;margin-bottom:6px;text-align:center; }
+.prestige-modal-sub    { font-size:12px;color:#8060a0;text-align:center;line-height:1.7;margin-bottom:18px; }
+.prestige-modal-stats  {
+  background:rgba(180,100,255,0.06);border:1px solid rgba(180,100,255,0.2);
+  border-radius:12px;padding:14px;margin-bottom:16px;
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;
+}
+.prestige-modal-stat-item { text-align:center; }
+.prestige-modal-stat-label { font-size:10px;color:#8060a0;margin-bottom:3px; }
+.prestige-modal-stat-val   { font-family:'Black Han Sans',sans-serif;font-size:16px;color:#e0b0ff; }
+.prestige-modal-confirm {
+  width:100%;padding:15px;border:none;border-radius:12px;
+  background:linear-gradient(90deg,#7030b0,#c060f0);
+  color:#fff;font-size:15px;font-weight:700;
+  font-family:'Noto Sans KR',sans-serif;cursor:pointer;
+  transition:opacity 0.15s;margin-bottom:10px;
+}
+.prestige-modal-confirm:active { opacity:0.85; }
+.prestige-modal-cancel {
+  width:100%;padding:12px;border:none;border-radius:12px;
+  background:transparent;border:1px solid rgba(180,100,255,0.25);
+  color:#8060a0;font-size:13px;font-family:'Noto Sans KR',sans-serif;cursor:pointer;
+}
+
+/* ── 스킬 트리 ── */
+.skill-style-select {
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;
+}
+.skill-style-btn {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:12px 8px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  cursor:pointer;transition:all 0.15s;
+}
+.skill-style-btn.active-modern  { border-color:#4da6ff;background:rgba(77,166,255,0.1); }
+.skill-style-btn.active-classic { border-color:#c8943a;background:rgba(200,148,58,0.1); }
+.skill-style-btn.active-eco     { border-color:#5dc85d;background:rgba(93,200,93,0.1); }
+.skill-style-btn:active { transform:scale(0.96); }
+.skill-style-icon { font-size:26px; }
+.skill-style-name { font-size:11px;font-weight:700;color:var(--muted); }
+.skill-style-btn.active-modern  .skill-style-name { color:#4da6ff; }
+.skill-style-btn.active-classic .skill-style-name { color:#c8943a; }
+.skill-style-btn.active-eco     .skill-style-name { color:#5dc85d; }
+
+.skill-tree-wrap { display:flex;flex-direction:column;gap:10px; }
+
+.skill-row {
+  display:flex;align-items:stretch;gap:0;
+  position:relative;
+}
+.skill-row::before {
+  content:'';position:absolute;left:22px;top:0;bottom:0;
+  width:2px;background:var(--border);z-index:0;
+}
+.skill-row:first-child::before { top:50%; }
+.skill-row:last-child::before  { bottom:50%; }
+
+.skill-connector {
+  width:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  position:relative;z-index:1;
+}
+.skill-connector-dot {
+  width:10px;height:10px;border-radius:50%;
+  border:2px solid var(--border);background:var(--surface2);
+  transition:all 0.2s;
+}
+.skill-unlocked .skill-connector-dot { background:var(--gold);border-color:var(--gold); }
+.skill-modern   .skill-connector-dot { background:#4da6ff;border-color:#4da6ff; }
+.skill-classic  .skill-connector-dot { background:#c8943a;border-color:#c8943a; }
+.skill-eco      .skill-connector-dot { background:#5dc85d;border-color:#5dc85d; }
+
+.skill-card {
+  flex:1;background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:12px 14px;
+  display:flex;align-items:center;gap:10px;
+  cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden;
+}
+.skill-card::before {
+  content:'';position:absolute;left:0;top:0;bottom:0;
+  width:3px;border-radius:3px 0 0 3px;opacity:0;transition:opacity 0.2s;
+}
+.skill-modern.skill-card::before  { background:#4da6ff;opacity:1; }
+.skill-classic.skill-card::before { background:#c8943a;opacity:1; }
+.skill-eco.skill-card::before     { background:#5dc85d;opacity:1; }
+
+.skill-card.locked    { opacity:0.35;cursor:not-allowed; }
+.skill-card.maxed     { opacity:0.6;cursor:default; }
+.skill-card.can:active { transform:scale(0.98); }
+
+.skill-icon-wrap {
+  width:40px;height:40px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  border:1px solid var(--border);background:var(--surface2);
+}
+.skill-modern.skill-card  .skill-icon-wrap { background:rgba(77,166,255,0.1);border-color:rgba(77,166,255,0.3); }
+.skill-classic.skill-card .skill-icon-wrap { background:rgba(200,148,58,0.1);border-color:rgba(200,148,58,0.3); }
+.skill-eco.skill-card     .skill-icon-wrap { background:rgba(93,200,93,0.1);border-color:rgba(93,200,93,0.3); }
+
+.skill-info { flex:1;min-width:0; }
+.skill-name { font-size:13px;font-weight:700;color:var(--white); }
+.skill-desc { font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4; }
+.skill-effect { font-size:11px;margin-top:3px;font-weight:700; }
+.skill-modern.skill-card  .skill-effect { color:#4da6ff; }
+.skill-classic.skill-card .skill-effect { color:#c8943a; }
+.skill-eco.skill-card     .skill-effect { color:#5dc85d; }
+
+.skill-right { text-align:right;flex-shrink:0; }
+.skill-cost  { font-family:'Black Han Sans',sans-serif;font-size:14px;color:var(--gold); }
+.skill-level { font-size:10px;color:var(--muted);margin-top:2px; }
+
+.skill-active-banner {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:12px 14px;margin-bottom:12px;
+  display:flex;align-items:center;gap:12px;
+}
+.skill-active-icon { font-size:28px;flex-shrink:0; }
+.skill-active-info {}
+.skill-active-name { font-size:13px;font-weight:700; }
+.skill-active-desc { font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5; }
+.skill-active-banner.modern  { border-color:rgba(77,166,255,0.4); }
+.skill-active-banner.modern  .skill-active-name { color:#4da6ff; }
+.skill-active-banner.classic { border-color:rgba(200,148,58,0.4); }
+.skill-active-banner.classic .skill-active-name { color:#c8943a; }
+.skill-active-banner.eco     { border-color:rgba(93,200,93,0.4); }
+.skill-active-banner.eco     .skill-active-name { color:#5dc85d; }
+</style>
+</head>
+<body>
+
+<!-- 상단 바 -->
+<div class="top-bar">
+  <div class="top-avatar" id="top-avatar">🏛</div>
+  <div class="top-info">
+    <div class="top-name" id="top-name">견습 설계사</div>
+    <div class="top-lv" id="top-lv">LV.1 견습생 · XP 0/20</div>
+  </div>
+  <div class="top-pts">
+    <div class="top-pts-val" id="top-pts">0</div>
+    <div class="top-pts-label">설계 포인트</div>
+  </div>
+  <button class="top-save-btn" id="top-save-btn" onclick="saveGame()" title="저장">💾</button>
+</div>
+<div class="xp-strip"><div class="xp-strip-fill" id="xp-fill" style="width:0%"></div></div>
+
+<!-- 스크롤 영역 -->
+<div class="scroll-area" id="scroll-area">
+
+  <!-- 탭: 메인 -->
+  <div class="tab-panel active" id="tab-main">
+    <div class="char-zone">
+      <div class="char-title-badge" id="job-badge">📋 견습 설계사</div>
+
+      <!-- 건물 SVG 클릭 영역 -->
+      <div class="char-building" id="char-building" onclick="handleClick(event)">
+        <svg viewBox="0 0 160 180" xmlns="http://www.w3.org/2000/svg">
+          <g stroke="#f5c842" fill="none" stroke-width="1.2" stroke-linecap="round">
+            <rect x="18" y="135" width="124" height="36" rx="2" fill="rgba(245,200,66,0.04)"/>
+            <rect x="30" y="72" width="100" height="65" fill="rgba(245,200,66,0.04)"/>
+            <rect x="52" y="28" width="56" height="46" fill="rgba(245,200,66,0.04)"/>
+            <polygon points="80,8 112,28 48,28" fill="rgba(245,200,66,0.08)"/>
+            <!-- 창문들 -->
+            <rect x="26" y="147" width="20" height="16" rx="1" fill="rgba(77,217,245,0.08)"/>
+            <rect x="52" y="147" width="20" height="16" rx="1" fill="rgba(77,217,245,0.08)"/>
+            <rect x="78" y="147" width="20" height="16" rx="1" fill="rgba(77,217,245,0.08)"/>
+            <rect x="104" y="147" width="20" height="16" rx="1" fill="rgba(77,217,245,0.08)"/>
+            <rect x="38" y="82" width="18" height="14" rx="1" fill="rgba(77,217,245,0.08)"/>
+            <rect x="71" y="82" width="18" height="14" rx="1" fill="rgba(77,217,245,0.08)"/>
+            <rect x="104" y="82" width="18" height="14" rx="1" fill="rgba(77,217,245,0.08)"/>
+            <rect x="38" y="106" width="18" height="14" rx="1" fill="rgba(77,217,245,0.08)"/>
+            <rect x="71" y="106" width="18" height="14" rx="1" fill="rgba(77,217,245,0.08)"/>
+            <rect x="104" y="106" width="18" height="14" rx="1" fill="rgba(77,217,245,0.08)"/>
+            <rect x="60" y="36" width="14" height="11" rx="1" fill="rgba(77,217,245,0.08)"/>
+            <rect x="86" y="36" width="14" height="11" rx="1" fill="rgba(77,217,245,0.08)"/>
+            <rect x="60" y="54" width="14" height="11" rx="1" fill="rgba(77,217,245,0.08)"/>
+            <rect x="86" y="54" width="14" height="11" rx="1" fill="rgba(77,217,245,0.08)"/>
+            <!-- 문 -->
+            <rect x="66" y="147" width="28" height="24" rx="2" fill="rgba(245,200,66,0.08)"/>
+            <!-- 치수선 -->
+            <line x1="8" y1="28" x2="8" y2="171" stroke="rgba(245,200,66,0.25)" stroke-dasharray="3 3"/>
+          </g>
+          <g id="win-glow" opacity="0" style="transition:opacity 0.1s">
+            <rect x="38" y="82" width="18" height="14" rx="1" fill="rgba(77,217,245,0.55)"/>
+            <rect x="71" y="82" width="18" height="14" rx="1" fill="rgba(77,217,245,0.55)"/>
+            <rect x="104" y="82" width="18" height="14" rx="1" fill="rgba(77,217,245,0.55)"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="click-hint-row">
+        <div class="click-hint-dot"></div>
+        <span>탭해서 설계하기</span>
+      </div>
+
+      <div class="click-stats-row">
+        <div class="click-stat">
+          <div class="click-stat-val" id="cpc-disp">+1</div>
+          <div class="click-stat-label">탭당 포인트</div>
+        </div>
+        <div class="click-stat">
+          <div class="click-stat-val" id="cps-disp">+0</div>
+          <div class="click-stat-label"><span class="auto-dot"></span>초당 자동</div>
+        </div>
+        <div class="click-stat">
+          <div class="click-stat-val" id="bld-disp">0</div>
+          <div class="click-stat-label">완성 건물</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 로그 -->
+    <div style="padding:12px">
+      <div class="section-title">활동 기록</div>
+      <div class="log-box" id="log-box">
+        <div class="log-entry"><span class="log-time">00:00</span><span>🏗 사무소 오픈! 설계를 시작하세요.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 탭: 업그레이드 -->
+  <div class="tab-panel" id="tab-upg">
+    <div class="section-title">업그레이드</div>
+    <div class="upg-list" id="upg-list"></div>
+  </div>
+
+  <!-- 탭: 의뢰 미션 -->
+  <div class="tab-panel" id="tab-mission">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="section-title" style="margin-bottom:0;flex:1">의뢰 현황</div>
+      <div id="mission-refresh-wrap" style="font-size:11px;color:var(--muted);font-family:'Noto Sans KR',sans-serif"></div>
+    </div>
+    <div id="mission-list" style="display:flex;flex-direction:column;gap:10px"></div>
+    <div style="margin-top:14px">
+      <div class="section-title">완료한 의뢰</div>
+      <div id="mission-done-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="mission-done-empty" style="font-size:12px;color:var(--muted);text-align:center;padding:16px 0">아직 완료한 의뢰가 없어요</div>
+    </div>
+  </div>
+
+  <!-- 탭: 제도 미니게임 -->
+  <div class="tab-panel" id="tab-draft">
+    <div class="section-title">제도 미니게임</div>
+    <canvas id="draft-canvas" width="440" height="160"></canvas>
+    <div class="draft-result-box">
+      <div class="draft-acc-big" id="d-acc">—</div>
+      <div class="draft-acc-info">
+        <div style="font-size:13px;font-weight:700;color:var(--white)" id="d-grade">선을 따라 그어보세요</div>
+        <div class="draft-acc-sub" id="d-reward">파란 점선을 손가락으로 따라 그으면 정확도에 따라 최대 ×10 보너스!</div>
+        <div class="acc-bar-bg"><div class="acc-bar-fill" id="d-bar" style="width:0%;background:var(--muted)"></div></div>
+      </div>
+    </div>
+    <div class="draft-guide-card">
+      파란 점선 가이드를 <b>손가락으로 따라</b> 그으세요<br>
+      정확도 <b>95%+</b> → ×10 · <b>85%+</b> → ×7 · <b>70%+</b> → ×4<br>
+      <b>50%+</b> → ×2 · 30초마다 새 문제 자동 출제
+    </div>
+    <button class="draft-reset-btn" onclick="newChallenge()">↺ 새 도전</button>
+  </div>
+
+  <!-- 탭: 보상 -->
+  <div class="tab-panel" id="tab-reward">
+    <div class="section-title">보상</div>
+    <div class="reward-cards">
+      <div class="reward-card ad-card" id="ad-card" onclick="openAd()">
+        <div class="rc-top">
+          <div class="rc-icon">📺</div>
+          <div class="rc-title-wrap">
+            <div class="rc-title">광고 보기</div>
+            <div class="rc-subtitle">30초 시청 후 대형 보너스</div>
+          </div>
+        </div>
+        <div class="rc-reward" id="ad-reward-txt">⚡ 즉시 +500pts · 30분간 ×5 배율</div>
+        <div class="rc-cd" id="ad-cd-txt"></div>
+      </div>
+
+      <div class="reward-card pm-card" onclick="togglePremium()">
+        <div class="rc-top">
+          <div class="rc-icon">👑</div>
+          <div class="rc-title-wrap">
+            <div class="rc-title">프리미엄 패스</div>
+            <div class="rc-subtitle">영구 보너스 · 광고 제거</div>
+          </div>
+        </div>
+        <div class="rc-reward">✨ 영구 ×2 배율 · 광고 없이 플레이</div>
+        <div class="pm-options">
+          <div class="pm-opt" onclick="selPlan(event,0)">
+            <div><div class="pm-opt-name">스타터 패스</div><div class="pm-opt-desc">×1.5 보너스 · 광고 제거</div></div>
+            <div class="pm-opt-price">₩3,900</div>
+          </div>
+          <div class="pm-opt sel" onclick="selPlan(event,1)">
+            <div><div class="pm-opt-name">🔥 아키텍트 패스</div><div class="pm-opt-desc">×2 보너스 · 광고 제거 · 특별 칭호</div></div>
+            <div class="pm-opt-price">₩9,900</div>
+          </div>
+          <div class="pm-opt" onclick="selPlan(event,2)">
+            <div><div class="pm-opt-name">마스터 패스</div><div class="pm-opt-desc">×3 보너스 · 독점 건물</div></div>
+            <div class="pm-opt-price">₩24,900</div>
+          </div>
+        </div>
+        <button class="pm-buy-btn" onclick="buyPremium(event)">구매하기 (시뮬레이션)</button>
+        <div class="pm-note">※ 실제 결제가 일어나지 않습니다. 출시 시 인앱결제 연동 예정.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 탭: 업적 -->
+  <div class="tab-panel" id="tab-ach">
+    <div class="ach-progress-box">
+      <div class="ach-progress-ring">
+        <svg width="54" height="54" viewBox="0 0 54 54">
+          <circle cx="27" cy="27" r="22" fill="none" stroke="rgba(245,200,66,0.15)" stroke-width="5"/>
+          <circle cx="27" cy="27" r="22" fill="none" stroke="var(--gold)" stroke-width="5"
+            stroke-linecap="round" stroke-dasharray="138.2"
+            id="ach-ring-fill" stroke-dashoffset="138.2"/>
+        </svg>
+        <div class="ach-progress-ring-val" id="ach-ring-val">0%</div>
+      </div>
+      <div class="ach-progress-info">
+        <div class="ach-progress-title" id="ach-progress-title">업적 0 / 33 달성</div>
+        <div class="ach-progress-sub" id="ach-progress-sub">첫 번째 업적을 달성해보세요!</div>
+      </div>
+    </div>
+    <div class="ach-tabs" id="ach-tabs">
+      <div class="ach-tab active" onclick="filterAch('all',this)">전체</div>
+      <div class="ach-tab" onclick="filterAch('play',this)">플레이</div>
+      <div class="ach-tab" onclick="filterAch('build',this)">건설</div>
+      <div class="ach-tab" onclick="filterAch('mission',this)">의뢰</div>
+      <div class="ach-tab" onclick="filterAch('draft',this)">제도</div>
+      <div class="ach-tab" onclick="filterAch('special',this)">특별</div>
+    </div>
+    <div class="ach-list" id="ach-list"></div>
+  </div>
+
+  <!-- 탭: 정보/세이브 -->
+  <div class="tab-panel" id="tab-info">
+    <div class="section-title">내 정보</div>
+    <div class="info-section">
+      <div class="info-row"><span class="info-row-label">레벨</span><span class="info-row-val" id="info-lv">LV.1</span></div>
+      <div class="info-row"><span class="info-row-label">칭호</span><span class="info-row-val" id="info-title">견습생</span></div>
+      <div class="info-row"><span class="info-row-label">총 획득 포인트</span><span class="info-row-val" id="info-total">0</span></div>
+      <div class="info-row"><span class="info-row-label">완성 건물</span><span class="info-row-val" id="info-bld">0</span></div>
+      <div class="info-row"><span class="info-row-label">클릭당 포인트</span><span class="info-row-val" id="info-cpc">1</span></div>
+      <div class="info-row"><span class="info-row-label">초당 자동 수입</span><span class="info-row-val" id="info-cps">0</span></div>
+      <div class="info-row"><span class="info-row-label">플레이 시간</span><span class="info-row-val" id="info-time">00:00</span></div>
+      <div class="info-row"><span class="info-row-label">프리미엄</span><span class="info-row-val" id="info-pm">없음</span></div>
+      <div class="info-row"><span class="info-row-label">환생 횟수</span><span class="info-row-val" id="info-prestige">0회</span></div>
+    </div>
+    <br>
+    <div class="section-title">저장/불러오기</div>
+    <button class="save-btn" onclick="saveGame()">💾 지금 저장하기</button>
+    <div class="save-ts" id="save-ts">저장된 기록 없음</div>
+    <br>
+    <button class="reset-btn" onclick="resetGame()">⚠ 데이터 초기화 (처음부터)</button>
+  </div>
+
+  <!-- 탭: 프레스티지/환생 -->
+  <div class="tab-panel" id="tab-prestige">
+    <div id="prestige-content"></div>
+    <div style="margin-top:14px" id="prestige-history-wrap" style="display:none">
+      <div class="section-title">환생 기록</div>
+      <div class="prestige-history" id="prestige-history-list"></div>
+    </div>
+  </div>
+
+  <!-- 탭: 스킬 트리 -->
+  <div class="tab-panel" id="tab-skill">
+    <div id="skill-active-banner-wrap"></div>
+    <div class="section-title">건축 철학 선택</div>
+    <div class="skill-style-select">
+      <div class="skill-style-btn" id="style-btn-modern"  onclick="selectStyle('modern')">
+        <div class="skill-style-icon">🏙</div>
+        <div class="skill-style-name">모던</div>
+      </div>
+      <div class="skill-style-btn" id="style-btn-classic" onclick="selectStyle('classic')">
+        <div class="skill-style-icon">🏛</div>
+        <div class="skill-style-name">클래식</div>
+      </div>
+      <div class="skill-style-btn" id="style-btn-eco"     onclick="selectStyle('eco')">
+        <div class="skill-style-icon">🌿</div>
+        <div class="skill-style-name">친환경</div>
+      </div>
+    </div>
+    <div class="section-title" id="skill-tree-title">스킬 트리</div>
+    <div class="skill-tree-wrap" id="skill-tree-list"></div>
+  </div>
+
+</div><!-- /scroll-area -->
+
+<!-- 하단 탭 바 -->
+<nav class="tab-bar">
+  <div class="tab-indicator" id="tab-indicator"></div>
+  <button class="tab-btn active" onclick="switchTab(0)">
+    <span class="tab-icon">🏗</span>
+    <span class="tab-label">메인</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab(1)">
+    <span class="tab-icon">⬆️</span>
+    <span class="tab-label">업그레이드</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab(2)">
+    <span class="tab-icon">📋</span>
+    <span class="tab-label">의뢰</span>
+    <span class="tab-badge" id="mission-badge" style="display:none"></span>
+  </button>
+  <button class="tab-btn" onclick="switchTab(3)">
+    <span class="tab-icon">🏅</span>
+    <span class="tab-label">업적</span>
+    <span class="tab-badge" id="ach-badge" style="display:none"></span>
+  </button>
+  <button class="tab-btn" onclick="switchTab(4)">
+    <span class="tab-icon">🌿</span>
+    <span class="tab-label">스킬</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab(5)">
+    <span class="tab-icon">♻️</span>
+    <span class="tab-label">환생</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab(6)">
+    <span class="tab-icon">📐</span>
+    <span class="tab-label">제도</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab(7)">
+    <span class="tab-icon">🎁</span>
+    <span class="tab-label">보상</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab(8)">
+    <span class="tab-icon">👤</span>
+    <span class="tab-label">정보</span>
+  </button>
+</nav>
+
+<!-- 프레스티지 확인 모달 -->
+<div class="prestige-modal-wrap hidden" id="prestige-modal">
+  <div class="prestige-modal-sheet">
+    <div class="prestige-modal-handle"></div>
+    <div style="text-align:center;font-size:44px;margin-bottom:10px">♻️</div>
+    <div class="prestige-modal-title">환생하시겠습니까?</div>
+    <div class="prestige-modal-sub" id="prestige-modal-sub">모든 포인트와 업그레이드가 초기화됩니다.<br>대신 영구적인 환생 보너스를 획득합니다.</div>
+    <div class="prestige-modal-stats" id="prestige-modal-stats"></div>
+    <button class="prestige-modal-confirm" onclick="confirmPrestige()">✨ 환생하기</button>
+    <button class="prestige-modal-cancel" onclick="closePrestigeModal()">취소</button>
+  </div>
+</div>
+
+<!-- 광고 모달 -->
+<div class="modal-wrap hidden" id="ad-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📺 광고 시청</div>
+    <div class="modal-desc">끝까지 시청하면 <strong style="color:var(--success)">+500pts · 30분간 ×5 배율</strong>을 드립니다!</div>
+    <div class="ad-sim-box">
+      <div class="ad-sim-label">// SIMULATED AD</div>
+      <div class="ad-timer" id="ad-timer">5</div>
+    </div>
+    <div class="modal-prog-bg"><div class="modal-prog-fill" id="ad-prog" style="width:100%"></div></div>
+    <button class="modal-claim-btn watching" id="ad-claim-btn" onclick="claimAd()">시청 중...</button>
+    <div class="modal-skip" onclick="closeAd()">✕ 닫기 (보상 없음)</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="ach-popup" id="ach-popup">
+  <div class="ach-popup-icon" id="ach-popup-icon">🏅</div>
+  <div class="ach-popup-text">
+    <div class="ach-popup-label">🏅 업적 달성!</div>
+    <div class="ach-popup-name" id="ach-popup-name"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  게임 상태
+// ═══════════════════════════════════════
+const DEFAULT_STATE = {
+  pts:0, total:0, ptsPerClick:1, ptsPerSec:0,
+  xp:0, level:1, buildings:0,
+  t0: Date.now(),
+  adMult:1, adEnd:0, adCdEnd:0,
+  premMult:1, isPremium:false, selPlan:1,
+  upgOwned: [0,0,0,0,0,0,0],
+  clickCount:0, missionsDone:0, urgentDone:0,
+  draftCount:0, draftBest:0, achCount:0, hasSaved:false,
+  prestigeCount:0, prestigeHistory:[],
+  activeStyle:null, skillLevels:{},
+};
+
+let G = Object.assign({}, DEFAULT_STATE);
+
+const LEVELS = [
+  {lvl:1,need:20,  title:'견습생',    job:'📋 견습 설계사',   icon:'🏛'},
+  {lvl:2,need:60,  title:'인턴',      job:'📐 주니어 드래프터',icon:'📐'},
+  {lvl:3,need:150, title:'설계사',    job:'📏 설계 보조',      icon:'📏'},
+  {lvl:4,need:350, title:'건축가',    job:'🏛 주임 건축가',    icon:'🏛'},
+  {lvl:5,need:800, title:'수석건축가',job:'🏗 수석 설계팀장',  icon:'🏗'},
+  {lvl:6,need:1800,title:'대가',      job:'🌆 마스터 아키텍트',icon:'🌆'},
+  {lvl:7,need:4000,title:'전설',      job:'🏆 전설의 건축왕',  icon:'🏆'},
+];
+
+const UPS = [
+  {name:'좋은 연필', icon:'✏️', desc:'탭당 +1 포인트',          cost:10,   sc:1.5, max:5,  fx:()=>G.ptsPerClick+=1},
+  {name:'정밀 자',   icon:'📏', desc:'탭당 +3 포인트',          cost:80,   sc:1.6, max:5,  fx:()=>G.ptsPerClick+=3},
+  {name:'인턴 고용', icon:'👷', desc:'초당 +1 자동 설계',       cost:50,   sc:2.0, max:10, fx:()=>G.ptsPerSec+=1},
+  {name:'CAD 소프트',icon:'💻', desc:'초당 +5 자동 설계',       cost:300,  sc:2.0, max:5,  fx:()=>G.ptsPerSec+=5},
+  {name:'사무소 오픈',icon:'🏢',desc:'초당 +20 자동 설계',      cost:1500, sc:2.2, max:3,  fx:()=>G.ptsPerSec+=20},
+  {name:'소형 건물', icon:'🏠', desc:'건물+1, 즉시 +200pts',    cost:500,  sc:3.0, max:99, fx:()=>{G.buildings+=1;addPts(200);log('🏠 소형 건물 완공! +200pts');}},
+  {name:'고층 타워', icon:'🏙', desc:'초당 +50, 건물+1',        cost:5000, sc:2.5, max:99, fx:()=>{G.ptsPerSec+=50;G.buildings+=1;log('🏙 타워 설계 완료!');} },
+];
+
+const PLANS = [{name:'스타터',m:1.5},{name:'아키텍트',m:2.0},{name:'마스터',m:3.0}];
+
+// ═══════════════════════════════════════
+//  유틸
+// ═══════════════════════════════════════
+function fmt(n){
+  n=Math.floor(n);
+  if(n>=1e9)return(n/1e9).toFixed(2)+'B';
+  if(n>=1e6)return(n/1e6).toFixed(2)+'M';
+  if(n>=1e3)return(n/1e3).toFixed(1)+'K';
+  return n+'';
+}
+function mult(){
+  const pc=G.prestigeCount||0;
+  const prestigeMult = 1 + pc*0.5;
+  return G.adMult * G.premMult * prestigeMult;
+}
+function addPts(n){G.pts+=n;G.total+=n;}
+
+// ═══════════════════════════════════════
+//  프레스티지 (환생) 시스템
+// ═══════════════════════════════════════
+const PRESTIGE_REQUIRE_LV  = 7;
+const PRESTIGE_REQUIRE_PTS = 50000;
+
+const PRESTIGE_PERKS = [
+  { icon:'⚡', name:'설계 속도 증가',   desc:'탭당 포인트 +50% 영구 증가',   val:(n)=>`×${(1+n*0.5).toFixed(1)}` },
+  { icon:'🤖', name:'자동 설계 강화',   desc:'초당 자동 수입 +30% 영구 증가', val:(n)=>`×${(1+n*0.3).toFixed(1)}` },
+  { icon:'🎯', name:'의뢰 보상 강화',   desc:'미션 보상 +20% 영구 증가',      val:(n)=>`×${(1+n*0.2).toFixed(1)}` },
+  { icon:'📐', name:'제도 보너스 강화', desc:'제도 미니게임 보상 +25% 증가',  val:(n)=>`×${(1+n*0.25).toFixed(1)}` },
+];
+
+function canPrestige(){
+  return G.level>=PRESTIGE_REQUIRE_LV && G.total>=PRESTIGE_REQUIRE_PTS;
+}
+
+function renderPrestige(){
+  const content  = document.getElementById('prestige-content');
+  const histWrap = document.getElementById('prestige-history-wrap');
+  const pc  = G.prestigeCount||0;
+  const can = canPrestige();
+
+  if(!can){
+    const lvOk  = G.level>=PRESTIGE_REQUIRE_LV;
+    const ptsOk = G.total>=PRESTIGE_REQUIRE_PTS;
+    content.innerHTML=`
+      <div class="prestige-locked">
+        <div class="prestige-locked-icon">♻️</div>
+        <div class="prestige-locked-title">환생 조건 미달성</div>
+        <div class="prestige-locked-desc">두 조건을 모두 충족하면 환생할 수 있어요.<br>환생하면 처음부터 시작하지만<br><strong style="color:var(--gold)">영구 보너스</strong>가 계속 쌓입니다!</div>
+        <div class="prestige-locked-progress">
+          <span class="prestige-locked-progress-label">${lvOk?'✅':'⬜'} LV.7 달성</span>
+          <span class="prestige-locked-progress-val" style="color:${lvOk?'var(--success)':'var(--muted)'}">
+            ${lvOk?'달성!':'LV.'+G.level+' / 7'}
+          </span>
+        </div>
+        <div class="prestige-locked-progress">
+          <span class="prestige-locked-progress-label">${ptsOk?'✅':'⬜'} 총 포인트 50,000</span>
+          <span class="prestige-locked-progress-val" style="color:${ptsOk?'var(--success)':'var(--muted)'}">
+            ${ptsOk?'달성!':fmt(G.total)+' / 50K'}
+          </span>
+        </div>
+        ${pc>0?`<div style="font-size:12px;color:#c87fff;margin-top:4px">✨ 현재 ${pc}회 환생 중 — 영구 보너스 ×${(1+pc*0.5).toFixed(1)} 활성</div>`:''}
+      </div>`;
+  } else {
+    const nextPc=pc+1;
+    content.innerHTML=`
+      <div class="prestige-ready">
+        <div class="prestige-ready-badge">✨ 환생 가능</div>
+        <div class="prestige-ready-icon">♻️</div>
+        <div class="prestige-ready-title">${nextPc}번째 환생</div>
+        <div class="prestige-ready-desc">모든 포인트와 업그레이드가 초기화됩니다.<br>대신 아래 영구 보너스가 영원히 유지됩니다.</div>
+        <div class="prestige-bonuses">
+          ${PRESTIGE_PERKS.map(p=>`
+            <div class="prestige-bonus-row">
+              <div class="prestige-bonus-icon">${p.icon}</div>
+              <div class="prestige-bonus-info">
+                <div class="prestige-bonus-name">${p.name}</div>
+                <div class="prestige-bonus-desc">${p.desc}</div>
+              </div>
+              <div class="prestige-bonus-val">${p.val(nextPc)}</div>
+            </div>`).join('')}
+        </div>
+        <button class="prestige-btn" onclick="openPrestigeModal()">♻️ 지금 환생하기</button>
+        <div class="prestige-warn">⚠ 포인트 ${fmt(G.pts)} · 업그레이드 · 레벨 초기화<br>업적 · 의뢰 기록 · 환생 횟수는 유지됩니다</div>
+      </div>`;
+  }
+
+  // 환생 기록
+  const history = G.prestigeHistory||[];
+  if(history.length===0){
+    histWrap.style.display='none';
+  } else {
+    histWrap.style.display='block';
+    const histList=document.getElementById('prestige-history-list');
+    histList.innerHTML='';
+    history.slice().reverse().forEach((h,i)=>{
+      const row=document.createElement('div');
+      row.className='prestige-history-row';
+      row.innerHTML=`
+        <div class="prestige-history-left">
+          <div class="prestige-history-num">${history.length-i}회</div>
+          <div>
+            <div class="prestige-history-label">${h.date} 환생</div>
+            <div class="prestige-history-val">총 포인트: ${fmt(h.total)} · LV.${h.level}</div>
+          </div>
+        </div>
+        <div class="prestige-history-mult">×${(1+(history.length-i)*0.5).toFixed(1)}</div>`;
+      histList.appendChild(row);
+    });
+  }
+}
+
+function openPrestigeModal(){
+  const pc=(G.prestigeCount||0)+1;
+  document.getElementById('prestige-modal-stats').innerHTML=`
+    <div class="prestige-modal-stat-item">
+      <div class="prestige-modal-stat-label">현재 총 포인트</div>
+      <div class="prestige-modal-stat-val">${fmt(G.total)}</div>
+    </div>
+    <div class="prestige-modal-stat-item">
+      <div class="prestige-modal-stat-label">환생 후 클릭 배율</div>
+      <div class="prestige-modal-stat-val">×${(1+pc*0.5).toFixed(1)}</div>
+    </div>
+    <div class="prestige-modal-stat-item">
+      <div class="prestige-modal-stat-label">완성 건물</div>
+      <div class="prestige-modal-stat-val">${G.buildings}채</div>
+    </div>
+    <div class="prestige-modal-stat-item">
+      <div class="prestige-modal-stat-label">환생 후 자동 배율</div>
+      <div class="prestige-modal-stat-val">×${(1+pc*0.3).toFixed(1)}</div>
+    </div>`;
+  document.getElementById('prestige-modal').classList.remove('hidden');
+}
+function closePrestigeModal(){
+  document.getElementById('prestige-modal').classList.add('hidden');
+}
+
+function confirmPrestige(){
+  closePrestigeModal();
+  const pc=(G.prestigeCount||0)+1;
+  const now=new Date();
+  const dateStr=`${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  // 유지 데이터 백업
+  const keep={
+    achUnlocked:[...achUnlocked],
+    history:[...(G.prestigeHistory||[]),{date:dateStr,total:G.total,level:G.level,buildings:G.buildings}],
+    missionsDone:G.missionsDone||0, urgentDone:G.urgentDone||0,
+    draftBest:G.draftBest||0, draftCount:G.draftCount||0,
+    clickCount:G.clickCount||0,
+    premMult:G.premMult, isPremium:G.isPremium, selPlan:G.selPlan,
+    activeStyle:G.activeStyle||null, skillLevels:G.skillLevels||{},
+  };
+
+  // 리셋
+  G=Object.assign({},DEFAULT_STATE,{
+    t0:Date.now(), prestigeCount:pc,
+    prestigeHistory:keep.history,
+    missionsDone:keep.missionsDone, urgentDone:keep.urgentDone,
+    draftBest:keep.draftBest, draftCount:keep.draftCount,
+    clickCount:keep.clickCount,
+    premMult:keep.premMult, isPremium:keep.isPremium, selPlan:keep.selPlan,
+    activeStyle:keep.activeStyle, skillLevels:keep.skillLevels,
+    hasSaved:true,
+  });
+  UPS.forEach(u=>u.owned=0);
+  achUnlocked.clear();
+  keep.achUnlocked.forEach(id=>achUnlocked.add(id));
+  MISSIONS=[]; missionDoneLog=[];
+
+  log(`✨ ${pc}번째 환생 완료! 영구 배율 ×${(1+pc*0.5).toFixed(1)} 적용!`);
+  toast(`♻️ ${pc}번째 환생! 새로운 시작!`,3500);
+  saveGame(true); renderAll(); initMissions();
+  switchTab(0); renderPrestige();
+}
+
+function toast(msg,dur=2200){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),dur);
+}
+
+function log(msg,isNew=true){
+  const box=document.getElementById('log-box');
+  const el=document.createElement('div');
+  el.className='log-entry'+(isNew?' new':'');
+  const e=Math.floor((Date.now()-G.t0)/1000);
+  el.innerHTML=`<span class="log-time">${String(Math.floor(e/60)).padStart(2,'0')}:${String(e%60).padStart(2,'0')}</span><span>${msg}</span>`;
+  box.prepend(el);
+  while(box.children.length>20)box.lastChild.remove();
+}
+
+// ═══════════════════════════════════════
+//  세이브/로드
+// ═══════════════════════════════════════
+const SAVE_KEY = 'architect_clicker_v1';
+
+function saveGame(silent=false){
+  G.hasSaved=true;
+  const data = {
+    pts:G.pts, total:G.total,
+    ptsPerClick:G.ptsPerClick, ptsPerSec:G.ptsPerSec,
+    xp:G.xp, level:G.level, buildings:G.buildings,
+    t0:G.t0,
+    adMult:G.adMult, adEnd:G.adEnd, adCdEnd:G.adCdEnd,
+    premMult:G.premMult, isPremium:G.isPremium, selPlan:G.selPlan,
+    upgOwned:UPS.map(u=>u.owned||0),
+    clickCount:G.clickCount||0, missionsDone:G.missionsDone||0,
+    urgentDone:G.urgentDone||0, draftCount:G.draftCount||0,
+    draftBest:G.draftBest||0, hasSaved:true,
+    achUnlocked:[...achUnlocked],
+    prestigeCount:G.prestigeCount||0,
+    prestigeHistory:G.prestigeHistory||[],
+    activeStyle:G.activeStyle||null,
+    skillLevels:G.skillLevels||{},
+    savedAt: Date.now(),
+  };
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    const dt=new Date();
+    const ts=`${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')} 저장됨`;
+    document.getElementById('save-ts').textContent=ts;
+    // 저장 버튼 피드백
+    const btn=document.getElementById('top-save-btn');
+    if(btn){ btn.textContent='✅'; btn.classList.add('saved');
+      setTimeout(()=>{ btn.textContent='💾'; btn.classList.remove('saved'); },1200); }
+    if(!silent) toast('💾 저장 완료!');
+  } catch(e){ if(!silent) toast('저장 실패 (저장공간 부족)'); }
+}
+
+function loadGame(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);
+    if(!raw) return false;
+    const d=JSON.parse(raw);
+    G.pts=d.pts||0; G.total=d.total||0;
+    G.ptsPerClick=d.ptsPerClick||1; G.ptsPerSec=d.ptsPerSec||0;
+    G.xp=d.xp||0; G.level=d.level||1; G.buildings=d.buildings||0;
+    G.t0=d.t0||Date.now();
+    G.adMult=d.adMult||1; G.adEnd=d.adEnd||0; G.adCdEnd=d.adCdEnd||0;
+    G.premMult=d.premMult||1; G.isPremium=d.isPremium||false; G.selPlan=d.selPlan||1;
+    G.clickCount=d.clickCount||0; G.missionsDone=d.missionsDone||0;
+    G.urgentDone=d.urgentDone||0; G.draftCount=d.draftCount||0;
+    G.draftBest=d.draftBest||0; G.hasSaved=d.hasSaved||false;
+    G.prestigeCount=d.prestigeCount||0;
+    G.prestigeHistory=d.prestigeHistory||[];
+    G.activeStyle=d.activeStyle||null;
+    G.skillLevels=d.skillLevels||{};
+    if(d.upgOwned) d.upgOwned.forEach((n,i)=>{ if(UPS[i]) UPS[i].owned=n; });
+    if(d.achUnlocked) d.achUnlocked.forEach(id=>achUnlocked.add(id));
+    if(d.savedAt){
+      const dt=new Date(d.savedAt);
+      document.getElementById('save-ts').textContent=`마지막 저장: ${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')}`;
+    }
+    return true;
+  }catch(e){return false;}
+}
+
+function resetGame(){
+  if(!confirm('정말 처음부터 시작할까요? 모든 데이터가 사라집니다.')) return;
+  localStorage.removeItem(SAVE_KEY);
+  UPS.forEach(u=>u.owned=0);
+  G = Object.assign({}, DEFAULT_STATE, {t0:Date.now()});
+  document.getElementById('save-ts').textContent='저장된 기록 없음';
+  renderAll(); log('🔄 데이터 초기화 완료!');
+  toast('처음부터 시작!');
+}
+
+// ═══════════════════════════════════════
+//  렌더
+// ═══════════════════════════════════════
+function renderAll(){
+  renderTop(); renderStats(); renderUpgrades(); renderAdBtn(); renderInfo();
+}
+
+function renderTop(){
+  const lv=LEVELS[Math.min(G.level-1,LEVELS.length-1)];
+  const nx=LEVELS[Math.min(G.level,LEVELS.length-1)];
+  document.getElementById('top-pts').textContent=fmt(G.pts);
+  document.getElementById('top-lv').textContent=`LV.${G.level} ${lv.title} · XP ${Math.floor(G.xp)}/${nx.need}`;
+  document.getElementById('top-name').textContent=lv.job;
+  document.getElementById('top-avatar').textContent=lv.icon;
+  document.getElementById('job-badge').textContent=lv.job;
+  const pct=Math.min(100,(G.xp/nx.need)*100);
+  document.getElementById('xp-fill').style.width=pct+'%';
+}
+
+function renderStats(){
+  const m=mult();
+  document.getElementById('cpc-disp').textContent='+'+fmt(G.ptsPerClick*m);
+  document.getElementById('cps-disp').textContent='+'+fmt(G.ptsPerSec*m);
+  document.getElementById('bld-disp').textContent=G.buildings;
+}
+
+function renderUpgrades(){
+  const list=document.getElementById('upg-list');
+  // 카드 수가 맞으면 innerHTML 재생성 안 하고 클래스/텍스트만 업데이트
+  if(list.children.length !== UPS.length){
+    list.innerHTML='';
+    UPS.forEach((u,i)=>{
+      const d=document.createElement('div');
+      d.className='upg-card cant';
+      d.dataset.idx=i;
+      d.innerHTML=`
+        <div class="upg-icon">${u.icon}</div>
+        <div class="upg-info">
+          <div class="upg-name">${u.name}</div>
+          <div class="upg-desc">${u.desc}</div>
+        </div>
+        <div class="upg-right">
+          <div class="upg-cost upg-cost-val"></div>
+          <div class="upg-owned upg-owned-val"></div>
+        </div>`;
+      d.addEventListener('click',()=>{
+        const idx=parseInt(d.dataset.idx);
+        buyUp(idx);
+      });
+      list.appendChild(d);
+    });
+  }
+  Array.from(list.children).forEach((d,i)=>{
+    const u=UPS[i];
+    const n=u.owned||0;
+    const cost=Math.floor(u.cost*Math.pow(u.sc,n));
+    const maxed=n>=u.max;
+    const can=!maxed&&G.pts>=cost;
+    d.className='upg-card '+(maxed?'done':can?'can':'cant');
+    d.querySelector('.upg-cost-val').textContent=maxed?'MAX':fmt(cost)+'p';
+    d.querySelector('.upg-owned-val').textContent=maxed?'✅ 완료':n+'/'+u.max;
+  });
+}
+
+function renderAdBtn(){
+  const now=Date.now();
+  const card=document.getElementById('ad-card');
+  const rtxt=document.getElementById('ad-reward-txt');
+  const cdtxt=document.getElementById('ad-cd-txt');
+
+  if(G.isPremium){
+    card.style.opacity='0.5';card.style.cursor='not-allowed';
+    cdtxt.textContent='👑 프리미엄 — 광고 불필요';return;
+  }
+
+  const cdLeft=Math.max(0,Math.ceil((G.adCdEnd-now)/1000));
+  card.style.opacity=cdLeft?'0.5':'1';
+  card.style.cursor=cdLeft?'not-allowed':'pointer';
+  cdtxt.textContent=cdLeft?`⏱ ${String(Math.floor(cdLeft/60)).padStart(2,'0')}:${String(cdLeft%60).padStart(2,'0')} 후 재시청 가능`:'';
+
+  const adLeft=Math.max(0,Math.ceil((G.adEnd-now)/1000));
+  if(adLeft>0){
+    rtxt.textContent=`⚡ ×5 진행 중 (${String(Math.floor(adLeft/60)).padStart(2,'0')}:${String(adLeft%60).padStart(2,'0')} 남음)`;
+  } else {
+    if(G.adMult>1)G.adMult=1;
+    rtxt.textContent='⚡ 즉시 +500pts · 30분간 ×5 배율';
+  }
+}
+
+function renderInfo(){
+  const lv=LEVELS[Math.min(G.level-1,LEVELS.length-1)];
+  const m=mult();
+  document.getElementById('info-lv').textContent='LV.'+G.level;
+  document.getElementById('info-title').textContent=lv.title;
+  document.getElementById('info-total').textContent=fmt(G.total);
+  document.getElementById('info-bld').textContent=G.buildings;
+  document.getElementById('info-cpc').textContent=fmt(G.ptsPerClick*m);
+  document.getElementById('info-cps').textContent=fmt(G.ptsPerSec*m)+'/s';
+  document.getElementById('info-pm').textContent=G.isPremium?`👑 ×${G.premMult}`:'없음';
+  document.getElementById('info-prestige').textContent=(G.prestigeCount||0)+'회';
+  const e=Math.floor((Date.now()-G.t0)/1000);
+  document.getElementById('info-time').textContent=
+    `${String(Math.floor(e/3600)).padStart(2,'0')}:${String(Math.floor((e%3600)/60)).padStart(2,'0')}:${String(e%60).padStart(2,'0')}`;
+}
+
+// ═══════════════════════════════════════
+//  탭 전환
+// ═══════════════════════════════════════
+let curTab=0;
+const TABS=['main','upg','mission','ach','skill','prestige','draft','reward','info'];
+
+function switchTab(i){
+  curTab=i;
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+TABS[i]).classList.add('active');
+  document.querySelectorAll('.tab-btn')[i].classList.add('active');
+  const pct=100/TABS.length;
+  document.getElementById('tab-indicator').style.left=(i*pct)+'%';
+  document.getElementById('tab-indicator').style.width=pct+'%';
+  document.getElementById('scroll-area').scrollTop=0;
+  if(i===6) resizeDraftCanvas();
+  if(i===2){ renderMissions(); hideMissionBadge(); }
+  if(i===3){ renderAchievements(achFilter||'all'); hideAchBadge(); }
+  if(i===4) renderSkillTree();
+  if(i===5) renderPrestige();
+}
+
+// ═══════════════════════════════════════
+//  스킬 트리 시스템
+// ═══════════════════════════════════════
+const STYLES = {
+  modern:  { name:'모던 건축',   icon:'🏙', color:'#4da6ff', desc:'혁신적 기술과 미래지향 설계. 클릭 효율·자동화에 특화.' },
+  classic: { name:'클래식 건축', icon:'🏛', color:'#c8943a', desc:'전통적 공법과 견고한 설계. 건물 완공 보너스·의뢰 수입에 특화.' },
+  eco:     { name:'친환경 건축', icon:'🌿', color:'#5dc85d', desc:'지속가능한 미래 도시 설계. 자동 수입 복리·의뢰 쿨다운 단축에 특화.' },
+};
+
+const SKILL_TREES = {
+  modern: [
+    { id:'m1', icon:'⚡', name:'디지털 설계',      desc:'CAD 최적화로 설계 속도 향상',          effect:'클릭당 +2pt',          cost:100,  maxLv:3, fx:(lv)=>G.ptsPerClick+=2*lv },
+    { id:'m2', icon:'🤖', name:'AI 보조 설계',      desc:'AI가 반복 작업을 자동 처리',            effect:'초당 +5pt 자동',        cost:300,  maxLv:3, fx:(lv)=>G.ptsPerSec+=5*lv  },
+    { id:'m3', icon:'🏗', name:'모듈러 공법',        desc:'표준화된 공법으로 시공 속도 증가',      effect:'클릭당 ×1.5',          cost:800,  maxLv:3, fx:(lv)=>G.ptsPerClick=Math.floor(G.ptsPerClick*Math.pow(1.5,lv)) },
+    { id:'m4', icon:'🌐', name:'글로벌 네트워크',   desc:'해외 의뢰 유입으로 수익 폭발',          effect:'의뢰 보상 +30%',        cost:2000, maxLv:2, fx:()=>{} },
+    { id:'m5', icon:'🚀', name:'스마트 빌딩 특허',  desc:'특허 수익으로 초당 수입 대폭 증가',     effect:'초당 +20pt 자동',       cost:5000, maxLv:2, fx:(lv)=>G.ptsPerSec+=20*lv },
+    { id:'m6', icon:'💎', name:'랜드마크 프로젝트', desc:'도시의 랜드마크를 설계해 최고 명성 획득',effect:'모든 수입 ×2',          cost:15000,maxLv:1, fx:()=>{ G.ptsPerClick*=2; G.ptsPerSec*=2; } },
+  ],
+  classic: [
+    { id:'c1', icon:'📏', name:'정밀 측량',          desc:'손 측량으로 도면 정확도 향상',          effect:'클릭당 +3pt',           cost:100,  maxLv:3, fx:(lv)=>G.ptsPerClick+=3*lv },
+    { id:'c2', icon:'🧱', name:'전통 벽돌 공법',     desc:'견고한 벽돌 공법으로 내구성 증가',      effect:'건물 완공 시 +300pt',   cost:300,  maxLv:3, fx:()=>{} },
+    { id:'c3', icon:'🏠', name:'소형 건물 특화',     desc:'소형 건물 의뢰 보상 대폭 증가',         effect:'소형 건물 보상 ×2',     cost:800,  maxLv:3, fx:()=>{} },
+    { id:'c4', icon:'🎨', name:'장인 정신',           desc:'각 프로젝트에 혼을 담아 고부가가치 창출',effect:'의뢰 보상 +50%',        cost:2000, maxLv:2, fx:()=>{} },
+    { id:'c5', icon:'🏛', name:'문화재 복원 전문',   desc:'문화재 복원 의뢰 독점 수주',            effect:'초당 +15pt 자동',       cost:5000, maxLv:2, fx:(lv)=>G.ptsPerSec+=15*lv },
+    { id:'c6', icon:'👑', name:'왕실 건축가 인증',   desc:'왕실 건축가로 인정받아 모든 수입 증가',  effect:'모든 수입 ×2',          cost:15000,maxLv:1, fx:()=>{ G.ptsPerClick*=2; G.ptsPerSec*=2; } },
+  ],
+  eco: [
+    { id:'e1', icon:'🌱', name:'친환경 자재 연구',   desc:'재활용 자재 사용으로 원가 절감',         effect:'초당 +3pt 자동',        cost:100,  maxLv:3, fx:(lv)=>G.ptsPerSec+=3*lv  },
+    { id:'e2', icon:'☀️', name:'태양광 설계 통합',   desc:'건물에 태양광 패널 통합 설계',           effect:'초당 +8pt 자동',        cost:300,  maxLv:3, fx:(lv)=>G.ptsPerSec+=8*lv  },
+    { id:'e3', icon:'💧', name:'빗물 재활용 시스템', desc:'빗물 재활용으로 운영비 절감 어필',        effect:'의뢰 쿨다운 -20%',      cost:800,  maxLv:3, fx:()=>{} },
+    { id:'e4', icon:'🌲', name:'옥상 정원 전문',     desc:'옥상 정원 설계로 프리미엄 의뢰 유치',    effect:'의뢰 보상 +40%',        cost:2000, maxLv:2, fx:()=>{} },
+    { id:'e5', icon:'🏘', name:'탄소 중립 단지',     desc:'친환경 주거단지 설계 국가 공모 수상',    effect:'초당 +25pt 자동',       cost:5000, maxLv:2, fx:(lv)=>G.ptsPerSec+=25*lv },
+    { id:'e6', icon:'🌍', name:'지속가능 도시 설계', desc:'UN 지속가능 도시 공식 파트너로 선정',    effect:'모든 수입 ×2',          cost:15000,maxLv:1, fx:()=>{ G.ptsPerClick*=2; G.ptsPerSec*=2; } },
+  ],
+};
+
+// 스킬 레벨 저장: { 'm1':2, 'c3':1, ... }
+// G.skillLevels 에 저장됨
+
+function getSkillLv(id){ return (G.skillLevels||{})[id]||0; }
+
+function selectStyle(style){
+  if(G.activeStyle && G.activeStyle!==style){
+    if(!confirm(`현재 [${STYLES[G.activeStyle].name}] 트리를 버리고 [${STYLES[style].name}]으로 바꿀까요?\n습득한 스킬 효과는 유지되지만 스킬 포인트는 환불되지 않습니다.`)) return;
+  }
+  G.activeStyle=style;
+  renderSkillTree();
+}
+
+function buySkill(id, style){
+  const tree = SKILL_TREES[style];
+  const sk = tree.find(s=>s.id===id);
+  if(!sk) return;
+  const lv = getSkillLv(id);
+  if(lv>=sk.maxLv) return;
+  // 선행 스킬 체크 (인덱스 순서대로 잠금)
+  const idx = tree.indexOf(sk);
+  if(idx>0){
+    const prev = tree[idx-1];
+    if(getSkillLv(prev.id)<1){ toast('이전 스킬을 먼저 해금하세요!',1800); return; }
+  }
+  const cost = Math.floor(sk.cost * Math.pow(1.8, lv));
+  if(G.pts<cost){ toast('포인트가 부족합니다!',1500); return; }
+  G.pts-=cost;
+  if(!G.skillLevels) G.skillLevels={};
+  G.skillLevels[id]=(lv+1);
+  sk.fx(1); // 스킬 효과 즉시 적용
+  log(`🌿 스킬 해금! [${sk.name}] LV.${lv+1}`);
+  toast(`✅ ${sk.name} LV.${lv+1} 해금!`,2000);
+  renderSkillTree(); renderAll();
+}
+
+function renderSkillTree(){
+  const style = G.activeStyle||null;
+
+  // 배너
+  const bannerWrap = document.getElementById('skill-active-banner-wrap');
+  if(style){
+    const s=STYLES[style];
+    bannerWrap.innerHTML=`
+      <div class="skill-active-banner ${style}">
+        <div class="skill-active-icon">${s.icon}</div>
+        <div class="skill-active-info">
+          <div class="skill-active-name">${s.name}</div>
+          <div class="skill-active-desc">${s.desc}</div>
+        </div>
+      </div>`;
+  } else {
+    bannerWrap.innerHTML=`<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px 0 14px">아래에서 건축 철학을 선택하세요</div>`;
+  }
+
+  // 스타일 버튼 active 표시
+  ['modern','classic','eco'].forEach(s=>{
+    const btn=document.getElementById('style-btn-'+s);
+    btn.className='skill-style-btn'+(style===s?' active-'+s:'');
+  });
+
+  // 트리
+  const treeWrap = document.getElementById('skill-tree-list');
+  const titleEl  = document.getElementById('skill-tree-title');
+
+  if(!style){
+    treeWrap.innerHTML=`<div style="text-align:center;padding:20px;font-size:12px;color:var(--muted)">건축 철학을 선택하면 스킬 트리가 열립니다</div>`;
+    titleEl.textContent='스킬 트리';
+    return;
+  }
+
+  const s=STYLES[style];
+  titleEl.textContent=s.icon+' '+s.name+' 스킬 트리';
+  treeWrap.innerHTML='';
+  const tree=SKILL_TREES[style];
+
+  tree.forEach((sk,idx)=>{
+    const lv=getSkillLv(sk.id);
+    const cost=Math.floor(sk.cost*Math.pow(1.8,lv));
+    const maxed=lv>=sk.maxLv;
+    const prevUnlocked=idx===0||getSkillLv(tree[idx-1].id)>=1;
+    const canBuy=!maxed&&prevUnlocked&&G.pts>=cost;
+    const locked=!prevUnlocked;
+
+    const row=document.createElement('div');
+    row.className='skill-row';
+    row.innerHTML=`
+      <div class="skill-connector">
+        <div class="skill-connector-dot"></div>
+      </div>
+      <div class="skill-card ${style} ${locked?'locked':maxed?'maxed':canBuy?'can':'cant'}">
+        <div class="skill-icon-wrap">${sk.icon}</div>
+        <div class="skill-info">
+          <div class="skill-name">${sk.name}</div>
+          <div class="skill-desc">${sk.desc}</div>
+          <div class="skill-effect">${sk.effect}</div>
+        </div>
+        <div class="skill-right">
+          <div class="skill-cost">${maxed?'MAX':locked?'🔒':fmt(cost)+'p'}</div>
+          <div class="skill-level">LV.${lv}/${sk.maxLv}</div>
+        </div>
+      </div>`;
+
+    // 해금된 스킬은 connector dot도 활성화
+    if(lv>0){
+      row.querySelector('.skill-connector-dot').classList.add(`skill-${style}`,'skill-unlocked');
+    }
+    if(canBuy) row.querySelector('.skill-card').onclick=()=>buySkill(sk.id,style);
+    treeWrap.appendChild(row);
+  });
+}
+
+// ═══════════════════════════════════════
+//  업적 시스템
+// ═══════════════════════════════════════
+const ACHIEVEMENTS = [
+  // 플레이
+  {id:'first_click',   cat:'play',    icon:'👆', name:'첫 설계',          desc:'처음으로 설계 포인트를 획득하세요',         cond:()=>G.total>=1,          reward:10,  xp:2},
+  {id:'click_100',     cat:'play',    icon:'✏️', name:'열정적인 설계사',   desc:'누적 100번 탭하기',                         cond:()=>G.clickCount>=100,   reward:50,  xp:5},
+  {id:'click_1000',    cat:'play',    icon:'📏', name:'숙련된 제도사',     desc:'누적 1,000번 탭하기',                       cond:()=>G.clickCount>=1000,  reward:300, xp:15},
+  {id:'click_10000',   cat:'play',    icon:'🖊', name:'타고난 건축가',     desc:'누적 10,000번 탭하기',                      cond:()=>G.clickCount>=10000, reward:2000,xp:50},
+  {id:'pts_1000',      cat:'play',    icon:'💰', name:'첫 월급',           desc:'설계 포인트 1,000 달성',                    cond:()=>G.total>=1000,       reward:100, xp:8},
+  {id:'pts_10000',     cat:'play',    icon:'💵', name:'작은 사무소',       desc:'설계 포인트 10,000 달성',                   cond:()=>G.total>=10000,      reward:500, xp:20},
+  {id:'pts_100000',    cat:'play',    icon:'💎', name:'대형 사무소',       desc:'설계 포인트 100,000 달성',                  cond:()=>G.total>=100000,     reward:5000,xp:60},
+  {id:'lv3',           cat:'play',    icon:'📐', name:'설계사 자격증',     desc:'LV.3 설계사 달성',                          cond:()=>G.level>=3,          reward:200, xp:10},
+  {id:'lv5',           cat:'play',    icon:'🏛', name:'건축 면허 취득',    desc:'LV.5 수석건축가 달성',                      cond:()=>G.level>=5,          reward:1000,xp:30},
+  {id:'lv7',           cat:'play',    icon:'👑', name:'건축계의 전설',     desc:'LV.7 전설 달성',                            cond:()=>G.level>=7,          reward:9999,xp:100},
+  // 건설
+  {id:'first_build',   cat:'build',   icon:'🏠', name:'첫 완공',           desc:'건물 1채 완성',                             cond:()=>G.buildings>=1,      reward:100, xp:5},
+  {id:'build_5',       cat:'build',   icon:'🏡', name:'작은 마을',         desc:'건물 5채 완성',                             cond:()=>G.buildings>=5,      reward:400, xp:15},
+  {id:'build_10',      cat:'build',   icon:'🏘', name:'소형 단지',         desc:'건물 10채 완성',                            cond:()=>G.buildings>=10,     reward:1000,xp:30},
+  {id:'build_30',      cat:'build',   icon:'🏙', name:'도시 개발자',       desc:'건물 30채 완성',                            cond:()=>G.buildings>=30,     reward:5000,xp:80},
+  {id:'auto_10',       cat:'build',   icon:'⚙️', name:'자동화의 시작',     desc:'초당 자동 수입 10 달성',                    cond:()=>G.ptsPerSec>=10,     reward:300, xp:10},
+  {id:'auto_100',      cat:'build',   icon:'🤖', name:'완전 자동화',       desc:'초당 자동 수입 100 달성',                   cond:()=>G.ptsPerSec>=100,    reward:2000,xp:40},
+  // 의뢰
+  {id:'first_mission', cat:'mission', icon:'📋', name:'첫 의뢰 수락',      desc:'의뢰 1건 완료',                             cond:()=>G.missionsDone>=1,   reward:150, xp:8},
+  {id:'mission_5',     cat:'mission', icon:'📁', name:'단골 의뢰인',       desc:'의뢰 5건 완료',                             cond:()=>G.missionsDone>=5,   reward:500, xp:20},
+  {id:'mission_15',    cat:'mission', icon:'🗂', name:'전문 건축 사무소',  desc:'의뢰 15건 완료',                            cond:()=>G.missionsDone>=15,  reward:2000,xp:50},
+  {id:'mission_30',    cat:'mission', icon:'🏆', name:'업계 최고의 사무소',desc:'의뢰 30건 완료',                            cond:()=>G.missionsDone>=30,  reward:8000,xp:100},
+  {id:'urgent_3',      cat:'mission', icon:'🚨', name:'긴급 출동 전문가',  desc:'긴급 의뢰 3건 완료',                        cond:()=>G.urgentDone>=3,     reward:800, xp:25},
+  // 제도
+  {id:'first_draft',   cat:'draft',   icon:'📐', name:'제도판 앞에서',     desc:'제도 미니게임 첫 도전',                     cond:()=>G.draftCount>=1,     reward:50,  xp:3},
+  {id:'draft_perfect', cat:'draft',   icon:'🎯', name:'완벽한 선',         desc:'제도 정확도 95% 이상 달성',                 cond:()=>G.draftBest>=95,     reward:500, xp:20},
+  {id:'draft_10',      cat:'draft',   icon:'✒️', name:'제도 수련생',       desc:'제도 미니게임 10회 도전',                   cond:()=>G.draftCount>=10,    reward:200, xp:10},
+  {id:'draft_50',      cat:'draft',   icon:'🖋', name:'정밀 제도사',       desc:'제도 미니게임 50회 도전',                   cond:()=>G.draftCount>=50,    reward:1500,xp:40},
+  // 특별
+  {id:'speed_lv2',     cat:'special', icon:'⚡', name:'빠른 성장',         desc:'게임 시작 5분 내 LV.2 달성',                cond:()=>G.level>=2&&(Date.now()-G.t0)<5*60*1000, reward:200,xp:10},
+  {id:'save_first',    cat:'special', icon:'💾', name:'꼼꼼한 건축가',     desc:'게임을 저장하세요',                         cond:()=>G.hasSaved,          reward:30,  xp:2},
+  {id:'premium',       cat:'special', icon:'👑', name:'VIP 건축가',        desc:'프리미엄 패스 구매',                        cond:()=>G.isPremium,         reward:500, xp:30},
+  {id:'night_owl',     cat:'special', icon:'🦉', name:'야근하는 설계사',   desc:'플레이 시간 10분 초과',                     cond:()=>(Date.now()-G.t0)>=10*60*1000, reward:100,xp:5},
+  {id:'all_upg',       cat:'special', icon:'🔧', name:'업그레이드 수집가', desc:'모든 업그레이드 1개 이상 구매',             cond:()=>UPS.every(u=>(u.owned||0)>=1), reward:1000,xp:35},
+  {id:'prestige_1',    cat:'special', icon:'♻️', name:'첫 환생',           desc:'처음으로 환생하기',                         cond:()=>(G.prestigeCount||0)>=1, reward:3000,xp:50},
+  {id:'prestige_3',    cat:'special', icon:'🌀', name:'환생의 달인',        desc:'3번 환생하기',                              cond:()=>(G.prestigeCount||0)>=3, reward:9999,xp:100},
+  {id:'prestige_5',    cat:'special', icon:'💫', name:'환생의 신',          desc:'5번 환생하기',                              cond:()=>(G.prestigeCount||0)>=5, reward:30000,xp:200},
+  {id:'skill_first',   cat:'special', icon:'🌿', name:'건축 철학 확립',     desc:'처음으로 스킬을 해금하세요',                cond:()=>Object.values(G.skillLevels||{}).some(v=>v>0), reward:200,xp:10},
+  {id:'skill_all6',    cat:'special', icon:'⭐', name:'스킬 마스터',         desc:'한 스타일의 스킬 6개 모두 해금',            cond:()=>['modern','classic','eco'].some(s=>SKILL_TREES[s].every(sk=>getSkillLv(sk.id)>=1)), reward:5000,xp:60},
+  {id:'skill_legend',  cat:'special', icon:'🌟', name:'전설의 건축가',       desc:'최고 스킬(6번째) 해금',                     cond:()=>['modern','classic','eco'].some(s=>getSkillLv(SKILL_TREES[s][5].id)>=1), reward:10000,xp:80},
+];
+
+let achFilter = 'all';
+let achUnlocked = new Set(); // 달성한 업적 id 목록
+
+function checkAchievements(){
+  let newUnlock = false;
+  ACHIEVEMENTS.forEach(a=>{
+    if(achUnlocked.has(a.id)) return;
+    if(a.cond()){
+      achUnlocked.add(a.id);
+      // 보상 지급
+      addPts(a.reward);
+      G.xp += a.xp;
+      G.achCount = achUnlocked.size;
+      newUnlock = true;
+      showAchPopup(a);
+      log(`🏅 업적 달성! [${a.name}] +${fmt(a.reward)}pts +${a.xp}XP`);
+    }
+  });
+  if(newUnlock){ checkLvl(); showAchBadge(); }
+}
+
+function showAchPopup(a){
+  const pop = document.getElementById('ach-popup');
+  document.getElementById('ach-popup-icon').textContent = a.icon;
+  document.getElementById('ach-popup-name').textContent = a.name;
+  pop.classList.add('show');
+  clearTimeout(pop._t);
+  pop._t = setTimeout(()=>pop.classList.remove('show'), 3000);
+}
+
+function showAchBadge(){
+  const b=document.getElementById('ach-badge');
+  if(b && curTab!==3) b.style.display='block';
+}
+function hideAchBadge(){
+  const b=document.getElementById('ach-badge');
+  if(b) b.style.display='none';
+}
+
+function filterAch(cat, el){
+  achFilter = cat;
+  document.querySelectorAll('.ach-tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderAchievements(cat);
+}
+
+function renderAchievements(cat){
+  const total = ACHIEVEMENTS.length;
+  const done  = achUnlocked.size;
+  const pct   = Math.round((done/total)*100);
+  const circ  = 2*Math.PI*22;
+
+  document.getElementById('ach-ring-val').textContent = pct+'%';
+  document.getElementById('ach-ring-fill').style.strokeDashoffset = circ*(1-done/total);
+  document.getElementById('ach-progress-title').textContent = `업적 ${done} / ${total} 달성`;  document.getElementById('ach-progress-sub').textContent =
+    done===total ? '🎉 모든 업적 달성!' :
+    done===0     ? '첫 번째 업적을 달성해보세요!' :
+    `남은 업적 ${total-done}개`;
+
+  const list = document.getElementById('ach-list');
+  list.innerHTML='';
+  const filtered = cat==='all' ? ACHIEVEMENTS : ACHIEVEMENTS.filter(a=>a.cat===cat);
+
+  // 달성한 것 먼저, 미달성 뒤
+  const sorted = [
+    ...filtered.filter(a=> achUnlocked.has(a.id)),
+    ...filtered.filter(a=>!achUnlocked.has(a.id)),
+  ];
+
+  sorted.forEach(a=>{
+    const isUnlocked = achUnlocked.has(a.id);
+    const card = document.createElement('div');
+    card.className = `ach-card ${isUnlocked?'unlocked':'locked'}`;
+    card.innerHTML = `
+      <div class="ach-icon-wrap">${a.icon}</div>
+      <div class="ach-info">
+        <div class="ach-name">${isUnlocked?a.name:'???'}</div>
+        <div class="ach-desc">${isUnlocked?a.desc:'아직 달성하지 못한 업적입니다'}</div>
+      </div>
+      <div class="ach-right">
+        <div class="ach-check">${isUnlocked?'✅':'🔒'}</div>
+        <div class="ach-reward-txt">${isUnlocked?`+${fmt(a.reward)}p`:''}</div>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+// 업적 체크 — 2초마다
+setInterval(checkAchievements, 2000);
+
+// ═══════════════════════════════════════
+//  의뢰 미션 시스템
+// ═══════════════════════════════════════
+const MISSION_TEMPLATES = [
+  { id:'house_design',  icon:'🏠', name:'단독주택 설계',       client:'김철수 씨',     diff:'easy',   req:'click', reqAmt:30,  rewardMult:15,  bonusXP:5,  duration:5*60  },
+  { id:'cafe_design',   icon:'☕', name:'카페 인테리어 설계',   client:'이지은 카페',   diff:'easy',   req:'click', reqAmt:50,  rewardMult:20,  bonusXP:8,  duration:8*60  },
+  { id:'villa_plan',    icon:'🏡', name:'빌라 2채 설계',        client:'박건설 대표',   diff:'normal', req:'pts',   reqAmt:200, rewardMult:30,  bonusXP:12, duration:10*60 },
+  { id:'office_build',  icon:'🏢', name:'중소기업 사옥 설계',   client:'㈜테크스타',    diff:'normal', req:'click', reqAmt:100, rewardMult:40,  bonusXP:15, duration:12*60 },
+  { id:'school_plan',   icon:'🏫', name:'초등학교 증축 설계',   client:'교육청',        diff:'normal', req:'pts',   reqAmt:500, rewardMult:50,  bonusXP:20, duration:15*60 },
+  { id:'hotel_design',  icon:'🏨', name:'부티크 호텔 설계',     client:'럭셔리 리조트', diff:'urgent', req:'click', reqAmt:200, rewardMult:80,  bonusXP:30, duration:6*60  },
+  { id:'tower_plan',    icon:'🏙', name:'주상복합 타워 설계',   client:'대형건설사',    diff:'urgent', req:'pts',   reqAmt:2000,rewardMult:120, bonusXP:40, duration:8*60  },
+  { id:'museum_design', icon:'🏛', name:'시립 미술관 설계',     client:'서울시청',      diff:'urgent', req:'click', reqAmt:300, rewardMult:150, bonusXP:50, duration:5*60  },
+  { id:'bridge_plan',   icon:'🌉', name:'보행자 교량 설계',     client:'국토부',        diff:'normal', req:'pts',   reqAmt:800, rewardMult:60,  bonusXP:25, duration:12*60 },
+  { id:'eco_build',     icon:'🌿', name:'친환경 공공시설 설계', client:'환경부',        diff:'easy',   req:'click', reqAmt:60,  rewardMult:25,  bonusXP:10, duration:10*60 },
+  { id:'airport_plan',  icon:'✈️', name:'지방 공항 터미널 설계','client':'국토교통부',  diff:'urgent', req:'pts',   reqAmt:5000,rewardMult:200, bonusXP:80, duration:10*60 },
+  { id:'stadium_plan',  icon:'🏟', name:'소형 스타디움 설계',   client:'스포츠재단',    diff:'normal', req:'pts',   reqAmt:1200,rewardMult:90,  bonusXP:35, duration:15*60 },
+];
+
+// 활성 미션 상태
+let MISSIONS = []; // { ...template, startTime, deadline, progress, claimed, expired }
+let missionDoneLog = []; // 완료 기록 최근 5개
+let missionRefreshTime = 0; // 다음 새 미션 등장 시각
+
+function getMissionReward(m){
+  return Math.max(50, Math.floor(G.ptsPerClick * m.rewardMult * mult()));
+}
+
+function initMissions(){
+  if(MISSIONS.length===0) refreshMissions();
+}
+
+function refreshMissions(){
+  // 활성 미션 3개 유지 (완료·만료 제외)
+  MISSIONS = MISSIONS.filter(m=>!m.claimed && !m.expired);
+  const needed = 3 - MISSIONS.length;
+  const used = new Set(MISSIONS.map(m=>m.id));
+  const pool = MISSION_TEMPLATES.filter(t=>!used.has(t.id));
+  const shuffled = pool.sort(()=>Math.random()-0.5);
+  for(let i=0;i<Math.min(needed,shuffled.length);i++){
+    const t = shuffled[i];
+    MISSIONS.push({
+      ...t,
+      startTime: Date.now(),
+      deadline:  Date.now() + t.duration*1000,
+      progress:  0,
+      claimed:   false,
+      expired:   false,
+      uid: t.id + '_' + Date.now(),
+    });
+  }
+  missionRefreshTime = Date.now() + 3*60*1000; // 3분마다 만료 미션 보충
+}
+
+function tickMissions(){
+  const now = Date.now();
+  let changed = false;
+  let hasNew = false;
+
+  MISSIONS.forEach(m=>{
+    if(m.claimed || m.expired) return;
+    // 자동 클릭 진행 반영 (초당 자동수입 있으면 req:'pts' 미션 자동 진행)
+    if(m.req==='pts' && G.ptsPerSec>0){
+      m.progress = Math.min(m.reqAmt, m.progress + G.ptsPerSec*mult()*0.05);
+      changed = true;
+    }
+    // 만료 체크
+    if(now > m.deadline){
+      m.expired = true; changed = true;
+    }
+  });
+
+  // 새 미션 보충
+  if(now > missionRefreshTime){
+    refreshMissions(); changed = true; hasNew = true;
+  }
+
+  if(changed && curTab===2) renderMissions();
+  if(hasNew) showMissionBadge();
+}
+
+// 클릭 시 click 타입 미션 진행
+function progressClickMissions(){
+  MISSIONS.forEach(m=>{
+    if(m.claimed||m.expired||m.req!=='click') return;
+    m.progress = Math.min(m.reqAmt, m.progress+1);
+  });
+}
+
+function claimMission(uid){
+  const m = MISSIONS.find(x=>x.uid===uid);
+  if(!m||m.claimed||m.expired||m.progress<m.reqAmt) return;
+  m.claimed = true;
+  const reward = getMissionReward(m);
+  addPts(reward);
+  G.xp += m.bonusXP;
+  G.missionsDone = (G.missionsDone||0)+1;
+  if(m.diff==='urgent') G.urgentDone = (G.urgentDone||0)+1;
+  missionDoneLog.unshift({icon:m.icon, name:m.name, reward, xp:m.bonusXP, ts:Date.now()});
+  if(missionDoneLog.length>5) missionDoneLog.pop();
+  log(`📋 의뢰 완료! [${m.name}] +${fmt(reward)}pts +${m.bonusXP}XP`);
+  toast(`✅ ${m.name} 완료! +${fmt(reward)}pts`,2500);
+  checkLvl(); renderAll(); renderMissions();
+  // 빈 자리 바로 채우기
+  setTimeout(refreshMissions, 500);
+}
+
+function fmtTimer(ms){
+  if(ms<=0) return '만료';
+  const s=Math.ceil(ms/1000);
+  if(s<60) return s+'초';
+  const m=Math.floor(s/60), r=s%60;
+  return `${m}:${String(r).padStart(2,'0')}`;
+}
+
+function renderMissions(){
+  const list = document.getElementById('mission-list');
+  const doneList = document.getElementById('mission-done-list');
+  const doneEmpty = document.getElementById('mission-done-empty');
+  const now = Date.now();
+
+  // 새로고침 타이머
+  const rfLeft = Math.max(0, missionRefreshTime-now);
+  document.getElementById('mission-refresh-wrap').textContent =
+    rfLeft > 0 ? `새 의뢰 ${fmtTimer(rfLeft)}` : '';
+
+  // 활성 미션
+  list.innerHTML='';
+  const active = MISSIONS.filter(m=>!m.claimed && !m.expired);
+  if(active.length===0){
+    list.innerHTML=`<div style="text-align:center;padding:24px;font-size:12px;color:var(--muted)">현재 접수 가능한 의뢰가 없어요<br>잠시 후 새 의뢰가 등록됩니다</div>`;
+  }
+  active.forEach(m=>{
+    const pct = Math.min(100, (m.progress/m.reqAmt)*100);
+    const reward = getMissionReward(m);
+    const timeLeft = m.deadline - now;
+    const timerClass = timeLeft<60000?'danger':timeLeft<3*60000?'warn':'ok';
+    const isReady = m.progress >= m.reqAmt;
+    const reqLabel = m.req==='click'
+      ? `클릭 ${Math.floor(m.progress)} / ${m.reqAmt}회`
+      : `포인트 ${fmt(m.progress)} / ${fmt(m.reqAmt)}`;
+
+    const card = document.createElement('div');
+    card.className=`mission-card ${m.diff}`;
+    card.innerHTML=`
+      <div class="mission-top">
+        <div class="mission-icon">${m.icon}</div>
+        <div class="mission-meta">
+          <div class="mission-name">${m.name}</div>
+          <div class="mission-client">의뢰인: ${m.client}</div>
+        </div>
+        <div class="mission-diff diff-${m.diff}">${m.diff==='urgent'?'긴급':m.diff==='normal'?'일반':'쉬움'}</div>
+      </div>
+      <div class="mission-req">
+        <span>목표</span>
+        <span class="mission-req-val">${reqLabel}</span>
+        <span class="mission-req-progress" style="color:${isReady?'var(--success)':'var(--muted)'}">${Math.round(pct)}%</span>
+      </div>
+      <div class="mission-progress-bar">
+        <div class="mission-progress-fill" style="width:${pct}%;background:${isReady?'var(--success)':''}"></div>
+      </div>
+      <div class="mission-bottom">
+        <div class="mission-reward">보상 <span>:</span> ${fmt(reward)}pts + ${m.bonusXP}XP</div>
+        <div class="mission-timer ${timerClass}">${fmtTimer(timeLeft)}</div>
+        <button class="mission-claim-btn ${isReady?'ready':'working'}"
+          onclick="claimMission('${m.uid}')"
+          ${isReady?'':'disabled'}>
+          ${isReady?'수령하기':'진행 중'}
+        </button>
+      </div>`;
+    list.appendChild(card);
+  });
+
+  // 완료 기록
+  doneList.innerHTML='';
+  if(missionDoneLog.length===0){
+    doneEmpty.style.display='block';
+  } else {
+    doneEmpty.style.display='none';
+    missionDoneLog.forEach(d=>{
+      const row=document.createElement('div');
+      row.className='mission-done-row';
+      row.innerHTML=`
+        <div class="mission-done-icon">${d.icon}</div>
+        <div>
+          <div class="mission-done-name">${d.name}</div>
+          <div class="mission-done-reward">+${fmt(d.reward)}pts &nbsp;+${d.xp}XP</div>
+        </div>
+        <div class="mission-done-check">✅</div>`;
+      doneList.appendChild(row);
+    });
+  }
+}
+
+function showMissionBadge(){
+  const b=document.getElementById('mission-badge');
+  if(b && curTab!==2) b.style.display='block';
+}
+function hideMissionBadge(){
+  const b=document.getElementById('mission-badge');
+  if(b) b.style.display='none';
+}
+
+// 미션 틱 (1초마다)
+setInterval(tickMissions, 1000);
+
+// ═══════════════════════════════════════
+//  클릭
+// ═══════════════════════════════════════
+function handleClick(e){
+  const m=mult();
+  const gain=Math.floor(G.ptsPerClick*m);
+  addPts(gain); G.xp+=1; G.clickCount=(G.clickCount||0)+1;
+
+  const ft=document.createElement('div');
+  ft.className='float-txt';
+  ft.textContent='+'+gain;
+  ft.style.left=(e.clientX-20)+'px';
+  ft.style.top=(e.clientY-24)+'px';
+  document.body.appendChild(ft);
+  setTimeout(()=>ft.remove(),800);
+
+  const gw=document.getElementById('win-glow');
+  gw.style.opacity='1'; setTimeout(()=>gw.style.opacity='0',100);
+
+  checkLvl(); renderAll(); progressClickMissions();
+}
+
+function buyUp(i){
+  const u=UPS[i];
+  const n=u.owned||0;
+  const cost=Math.floor(u.cost*Math.pow(u.sc,n));
+  if(G.pts<cost)return;
+  G.pts-=cost; u.owned=(n+1);
+  u.fx(); log(`✅ ${u.name} 구매 (${u.owned}번째)`);
+  renderAll();
+}
+
+function checkLvl(){
+  if(G.level>=LEVELS.length)return;
+  const nx=LEVELS[Math.min(G.level,LEVELS.length-1)];
+  if(G.xp>=nx.need){
+    G.xp-=nx.need; G.level++;
+    const lv=LEVELS[G.level-1];
+    log(`🎉 레벨업! LV.${G.level} ${lv.title} 달성!`);
+    toast(`🎉 LV.${G.level} ${lv.title} 달성!`,3000);
+    renderAll();
+  }
+}
+
+// ═══════════════════════════════════════
+//  자동 수입 + 자동 저장
+// ═══════════════════════════════════════
+let autoSaveCount=0;
+setInterval(()=>{
+  if(G.ptsPerSec>0){ const g=G.ptsPerSec*mult()/20; addPts(g); }
+  autoSaveCount++;
+  if(autoSaveCount>=600){ autoSaveCount=0; saveGame(true); } // 30초마다 자동저장
+  renderAll();
+},50);
+
+// ═══════════════════════════════════════
+//  광고
+// ═══════════════════════════════════════
+let adIv=null;
+function openAd(){
+  if(G.adCdEnd>Date.now()||G.isPremium)return;
+  document.getElementById('ad-modal').classList.remove('hidden');
+  const btn=document.getElementById('ad-claim-btn');
+  btn.className='modal-claim-btn watching';btn.textContent='시청 중...';
+  document.getElementById('ad-prog').style.width='100%';
+  let sec=5; document.getElementById('ad-timer').textContent=sec;
+  clearInterval(adIv);
+  adIv=setInterval(()=>{
+    sec--;
+    document.getElementById('ad-timer').textContent=sec;
+    document.getElementById('ad-prog').style.width=(sec/5*100)+'%';
+    if(sec<=0){clearInterval(adIv);btn.className='modal-claim-btn done';btn.textContent='🎁 보상 받기!';}
+  },1000);
+}
+function claimAd(){
+  if(!document.getElementById('ad-claim-btn').classList.contains('done'))return;
+  clearInterval(adIv);
+  addPts(500); G.adMult=5;
+  G.adEnd=Date.now()+30*60*1000;
+  G.adCdEnd=Date.now()+60*60*1000;
+  log('📺 광고 보상! +500pts, ×5 배율 30분 적용');
+  toast('🎁 +500pts! 30분간 ×5 배율 시작!',3000);
+  closeAd(); renderAll();
+}
+function closeAd(){clearInterval(adIv);document.getElementById('ad-modal').classList.add('hidden');}
+
+// ═══════════════════════════════════════
+//  프리미엄
+// ═══════════════════════════════════════
+function selPlan(e,i){
+  e.stopPropagation();
+  G.selPlan=i;
+  document.querySelectorAll('.pm-opt').forEach((el,j)=>el.classList.toggle('sel',i===j));
+}
+function togglePremium(){}
+function buyPremium(e){
+  e.stopPropagation();
+  const p=PLANS[G.selPlan];
+  G.isPremium=true; G.premMult=p.m; G.adMult=1;
+  log(`👑 ${p.name} 패스 활성화! 영구 ×${p.m} 보너스`);
+  toast(`👑 ${p.name} 패스! 영구 ×${p.m} 적용`,3500);
+  renderAll();
+}
+
+// ═══════════════════════════════════════
+//  제도 미니게임
+// ═══════════════════════════════════════
+const cv=document.getElementById('draft-canvas');
+const cx=cv.getContext('2d');
+let dg={guide:[],drawn:[],drawing:false,scored:false,timer:null};
+
+function resizeDraftCanvas(){
+  const W=cv.parentElement.clientWidth-24;
+  cv.width=W; cv.height=160; drawCv();
+}
+
+function newChallenge(){
+  clearTimeout(dg.timer);
+  dg.drawn=[];dg.scored=false;
+  cv.classList.remove('locked');
+  const W=cv.width,H=cv.height;
+  const tpls=[
+    ()=>[{x:W*.1,y:H*.5},{x:W*.9,y:H*.5}],
+    ()=>[{x:W*.5,y:H*.12},{x:W*.5,y:H*.88}],
+    ()=>[{x:W*.1,y:H*.15},{x:W*.9,y:H*.85}],
+    ()=>[{x:W*.1,y:H*.85},{x:W*.9,y:H*.15}],
+    ()=>[{x:W*.15,y:H*.2},{x:W*.15,y:H*.8},{x:W*.85,y:H*.8}],
+    ()=>[{x:W*.15,y:H*.2},{x:W*.85,y:H*.2},{x:W*.85,y:H*.8},{x:W*.15,y:H*.8}],
+  ];
+  dg.guide=tpls[Math.floor(Math.random()*tpls.length)]();
+  document.getElementById('d-acc').textContent='—';
+  document.getElementById('d-grade').textContent='선을 따라 그어보세요';
+  document.getElementById('d-reward').textContent='파란 점선을 손가락으로 따라 그으면 정확도에 따라 최대 ×10 보너스!';
+  document.getElementById('d-bar').style.width='0%';
+  document.getElementById('d-bar').style.background='var(--muted)';
+  drawCv();
+  dg.timer=setTimeout(newChallenge,30000);
+}
+
+function drawCv(){
+  const W=cv.width,H=cv.height;
+  cx.clearRect(0,0,W,H);
+  if(dg.guide.length>=2){
+    cx.save();cx.setLineDash([8,5]);
+    cx.strokeStyle='rgba(245,200,66,0.6)';cx.lineWidth=2;cx.lineCap='round';cx.lineJoin='round';
+    cx.beginPath();cx.moveTo(dg.guide[0].x,dg.guide[0].y);
+    for(let i=1;i<dg.guide.length;i++)cx.lineTo(dg.guide[i].x,dg.guide[i].y);
+    cx.stroke();cx.restore();
+    cx.fillStyle='rgba(245,200,66,0.9)';
+    cx.beginPath();cx.arc(dg.guide[0].x,dg.guide[0].y,5,0,Math.PI*2);cx.fill();
+    const last=dg.guide[dg.guide.length-1];
+    cx.fillStyle='rgba(77,217,245,0.9)';
+    cx.beginPath();cx.arc(last.x,last.y,5,0,Math.PI*2);cx.fill();
+  }
+  if(dg.drawn.length>=2){
+    const acc=dg.scored?parseInt(document.getElementById('d-acc').textContent)||0:-1;
+    let color='rgba(77,217,245,0.85)';
+    if(dg.scored)color=acc>=70?'rgba(109,220,122,0.9)':'rgba(245,96,96,0.9)';
+    cx.save();cx.strokeStyle=color;cx.lineWidth=2.5;cx.lineCap='round';cx.lineJoin='round';cx.setLineDash([]);
+    cx.beginPath();cx.moveTo(dg.drawn[0].x,dg.drawn[0].y);
+    for(let i=1;i<dg.drawn.length;i++)cx.lineTo(dg.drawn[i].x,dg.drawn[i].y);
+    cx.stroke();cx.restore();
+  }
+}
+
+function calcAcc(){
+  if(dg.drawn.length<5||dg.guide.length<2)return 0;
+  const G2=dg.guide,cnt=60;let total=0;
+  for(let s=0;s<cnt;s++){
+    const t=s/(cnt-1),seg=t*(G2.length-1);
+    const i=Math.min(Math.floor(seg),G2.length-2),f=seg-i;
+    const gx=G2[i].x*(1-f)+G2[i+1].x*f,gy=G2[i].y*(1-f)+G2[i+1].y*f;
+    let minD=Infinity;
+    for(const p of dg.drawn){const d=Math.hypot(p.x-gx,p.y-gy);if(d<minD)minD=d;}
+    total+=minD;
+  }
+  return Math.max(0,Math.min(100,Math.round(100-(total/cnt/60)*100)));
+}
+
+function scoreDraft(){
+  if(dg.drawn.length<8)return;
+  dg.scored=true;cv.classList.add('locked');
+  const acc=calcAcc();
+  G.draftCount=(G.draftCount||0)+1;
+  if(acc>(G.draftBest||0)) G.draftBest=acc;
+  document.getElementById('d-acc').textContent=acc+'%';
+  const bar=document.getElementById('d-bar');
+  bar.style.width=acc+'%';
+  bar.style.background=acc>=70?'var(--success)':acc>=50?'var(--gold)':'var(--danger)';
+  let m=0,grade='';
+  if(acc>=95){m=10;grade='🏅 퍼펙트!';}
+  else if(acc>=85){m=7;grade='⭐ 훌륭함';}
+  else if(acc>=70){m=4;grade='👍 좋음';}
+  else if(acc>=50){m=2;grade='🙂 보통';}
+  else{m=0;grade='❌ 아쉬워요';}
+  document.getElementById('d-grade').textContent=grade;
+  if(m>0){
+    const reward=Math.max(10,Math.floor(G.ptsPerClick*m*20*mult()));
+    addPts(reward);G.xp+=Math.ceil(m/2);
+    document.getElementById('d-reward').textContent=`+${fmt(reward)}pts (×${m} 보너스)`;
+    log(`📐 제도: ${acc}% → +${fmt(reward)}pts (×${m})`);
+    toast(`${grade} 정확도 ${acc}%! +${fmt(reward)}pts`,2500);
+    checkLvl();
+  } else {
+    document.getElementById('d-reward').textContent='다음엔 더 정확하게!';
+  }
+  drawCv();renderAll();
+  dg.timer=setTimeout(newChallenge,5000);
+}
+
+function getPos(e){
+  const r=cv.getBoundingClientRect();
+  const sx=cv.width/r.width,sy=cv.height/r.height;
+  if(e.touches)return{x:(e.touches[0].clientX-r.left)*sx,y:(e.touches[0].clientY-r.top)*sy};
+  return{x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*sy};
+}
+cv.addEventListener('mousedown',e=>{if(dg.scored)return;dg.drawing=true;dg.drawn=[getPos(e)];drawCv();});
+cv.addEventListener('mousemove',e=>{if(!dg.drawing)return;dg.drawn.push(getPos(e));drawCv();});
+cv.addEventListener('mouseup',()=>{dg.drawing=false;scoreDraft();});
+cv.addEventListener('mouseleave',()=>{if(dg.drawing){dg.drawing=false;scoreDraft();}});
+cv.addEventListener('touchstart',e=>{e.preventDefault();if(dg.scored)return;dg.drawing=true;dg.drawn=[getPos(e)];drawCv();},{passive:false});
+cv.addEventListener('touchmove',e=>{e.preventDefault();if(!dg.drawing)return;dg.drawn.push(getPos(e));drawCv();},{passive:false});
+cv.addEventListener('touchend',()=>{dg.drawing=false;scoreDraft();});
+window.addEventListener('resize',()=>{if(curTab===2)resizeDraftCanvas();});
+
+// ═══════════════════════════════════════
+//  초기화
+// ═══════════════════════════════════════
+const loaded=loadGame();
+renderAll();
+resizeDraftCanvas();
+newChallenge();
+initMissions();
+renderSkillTree();
+if(loaded){
+  toast('💾 저장 데이터 불러오기 완료!',2500);
+  log('💾 이전 게임 데이터를 불러왔습니다.');
+} else {
+  log('🏗 사무소 오픈! 탭해서 설계를 시작하세요.', false);
+}
+// 자동 저장 알림
+setTimeout(()=>{
+  setInterval(()=>saveGame(true), 30000);
+},5000);
+</script>
+</body>
+</html>
